@@ -120,18 +120,14 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Netlify will inject these. For local dev, you can replace them.
         const firebaseConfig = typeof firebase_config !== 'undefined' ? JSON.parse(firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
         const appId = typeof app_id !== 'undefined' ? app_id : 'default-app-id';
         
-        // --- App Initialization ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- All code wrapped in DOMContentLoaded to ensure elements exist ---
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- GLOBAL STATE & DOM ELEMENTS ---
             let appConfig = {};
             let isLoggedIn = false;
             let blindsCalculatedData = null, pvcCalculatedData = null, woodCalculatedData = null;
@@ -150,7 +146,6 @@
             const adminLoginModal = document.getElementById('admin-login-modal');
             const adminPanelModal = document.getElementById('admin-panel-modal');
 
-            // --- HELPER FUNCTIONS ---
             const switchPage = (pageId) => {
                 Object.values(pageElements).forEach(page => page.style.display = 'none');
                 Object.values(tabElements).forEach(tab => tab.classList.remove('tab-active'));
@@ -199,7 +194,6 @@
                 doc.save(filename);
             };
 
-            // --- MAIN CALCULATION LOGIC ---
             const handleBlindsCalculation = async () => {
                 const widthInput = document.getElementById('blindsWidthInput'), heightInput = document.getElementById('blindsHeightInput'), errorDiv = document.getElementById('blindsErrorMessage'), resultsDiv = document.getElementById('blindsResults'), pdfBtn = document.getElementById('blindsPdfBtn'), saveBtn = document.getElementById('blindsSaveBtn'), loader = document.getElementById('blindsLoader'), btnText = document.getElementById('blindsBtnText'), calcBtn = document.getElementById('blindsCalculateBtn');
                 const width = parseInt(widthInput.value, 10), height = parseInt(heightInput.value, 10);
@@ -290,7 +284,6 @@
                  }
             };
             
-            // --- FIREBASE & ADMIN FUNCTIONS ---
             const initializeAppConfig = async () => {
                 const configRef = doc(db, `artifacts/${appId}/public/data/config/main`);
                 onSnapshot(configRef, (docSnap) => {
@@ -332,7 +325,9 @@
                     if(isVisible && !firstVisiblePage) firstVisiblePage = `page-${pageKey}`;
                 });
                 
-                switchPage(firstVisiblePage || 'page-blinds'); // Default to blinds if none are visible
+                if (firstVisiblePage) {
+                    switchPage(firstVisiblePage);
+                }
                 
                 const pvcSelect = document.getElementById('pvcPriceSelect');
                 if (pvcSelect && appConfig.prices?.pvc) { pvcSelect.innerHTML = appConfig.prices.pvc.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`; }
@@ -419,6 +414,7 @@
             document.getElementById('woodSaveBtn').addEventListener('click', () => { if(woodCalculatedData) saveQuotation('wood', woodCalculatedData, `มู่ลี่ไม้ - ${woodCalculatedData.priceText}`); });
             
             // --- INITIALIZATION ---
+            switchPage('page-blinds'); // <<< FIX: Show first page immediately
             initializeAppConfig();
             addPvcRow();
             addWoodRow();
