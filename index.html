@@ -111,13 +111,11 @@
 
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- App State ---
             let appConfig = {};
             let isLoggedIn = false;
             let blindsCalculatedData = null, pvcCalculatedData = null, woodCalculatedData = null;
             let pvcRowCount = 0, woodRowCount = 0;
             
-            // --- DOM Elements ---
             const pageElements = {
                 blinds: document.getElementById('page-blinds'),
                 pvc: document.getElementById('page-pvc'),
@@ -132,7 +130,6 @@
             const adminPanelModal = document.getElementById('admin-panel-modal');
             const viewQuoteModal = document.getElementById('view-quote-modal');
 
-            // --- UI & Helper Functions ---
             const switchPage = (pageId) => {
                 Object.values(pageElements).forEach(page => page.style.display = 'none');
                 Object.values(tabElements).forEach(tab => tab.classList.remove('tab-active'));
@@ -142,6 +139,7 @@
                     document.querySelector(`[data-page="${pageId}"]`).classList.add('tab-active');
                 }
             };
+
             const addRow = (container, rowCounter, type) => {
                 if (rowCounter >= 10) { alert('สามารถเพิ่มได้สูงสุด 10 รายการ'); return rowCounter; }
                 rowCounter++;
@@ -151,6 +149,7 @@
                 container.querySelector(`button[data-row-id="${rowId}"]`).addEventListener('click', (e) => e.target.parentElement.remove());
                 return rowCounter;
             };
+
             const addPvcRow = () => { pvcRowCount = addRow(document.getElementById('pvc-rows-container'), pvcRowCount, 'pvc'); };
             const addWoodRow = () => { woodRowCount = addRow(document.getElementById('wood-rows-container'), woodRowCount, 'wood'); };
             const normalizeToMeters = (value) => (value >= 10) ? value / 100 : value;
@@ -161,8 +160,7 @@
                 if (h <= 3.30 || h === 3.31) return 3.3; if (h <= 3.50 || h === 3.51) return 3.5;
                 if (h <= 3.70) return 3.7; return h;
             };
-
-            // --- PDF Generation (Stable English Version) ---
+            
             const generatePdf = (title, columns, rows, total, filename, extraInfo = []) => {
                 try {
                     const { jsPDF } = window.jspdf; const doc = new jsPDF();
@@ -177,32 +175,101 @@
                     doc.setFontSize(12); doc.text('Grand Total:', 140, finalY + 10);
                     doc.text(`THB ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`, 200, finalY + 10, { align: 'right' });
                     doc.save(filename);
-                } catch(e) {
-                    console.error("PDF Generation Error: ", e);
-                    alert("เกิดข้อผิดพลาดในการสร้าง PDF");
+                } catch(e) { console.error("PDF Generation Error: ", e); alert("เกิดข้อผิดพลาดในการสร้าง PDF"); }
+            };
+
+            const handleBlindsCalculation = async () => {
+                const widthInput = document.getElementById('blindsWidthInput'), heightInput = document.getElementById('blindsHeightInput'), errorDiv = document.getElementById('blindsErrorMessage'), resultsDiv = document.getElementById('blindsResults'), pdfBtn = document.getElementById('blindsPdfBtn'), saveBtn = document.getElementById('blindsSaveBtn'), loader = document.getElementById('blindsLoader'), btnText = document.getElementById('blindsBtnText'), calcBtn = document.getElementById('blindsCalculateBtn');
+                const width = parseInt(widthInput.value, 10), height = parseInt(heightInput.value, 10);
+                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) { alert('กรุณากรอกความกว้างและความสูง'); return; }
+
+                blindsCalculatedData = null; pdfBtn.disabled = true; saveBtn.disabled = true; errorDiv.textContent = ''; resultsDiv.classList.add('hidden'); loader.classList.remove('hidden'); btnText.style.display = 'none'; calcBtn.disabled = true;
+                
+                const blindsRoundDimension = (num) => { if (num <= 0) return 0; const r = num % 10; if (r === 0) return num; return r <= 4 ? num - r : num - r + 10; };
+                const findBlindsPrice = (dataRows, key) => {
+                    if (!dataRows) return null; const found = dataRows.find(r => r && r[0] && String(r[0]).toLowerCase().replace(/[^0-9x]/g, '') === key);
+                    if (found && found[1]) { const price = parseFloat(String(found[1]).replace(/[^0-9.]/g, '')); return isNaN(price) ? null : price; } return null;
+                };
+
+                const roundedWidth = blindsRoundDimension(width), roundedHeight = blindsRoundDimension(height);
+                const lookupKey = `${roundedWidth}x${roundedHeight}`;
+                document.getElementById('blindsRoundedSize').textContent = `(ขนาดที่ใช้คำนวณ: ${roundedWidth}x${roundedHeight})`;
+                
+                const API_KEY = 'AIzaSyDo8Vmy2yspXDKJ-nq3Yp7lPqeCXmQIlsA', SPREADSHEET_ID = '10rXzhR4bqKNj17Kk7uSNnOIJQCMjIBYQCOt21g5Zmow', RANGES = ['sheet1!A:B', 'sheet2!A:B'];
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${RANGES.join('&ranges=')}&key=${API_KEY}`;
+                
+                try {
+                    const response = await fetch(url); const data = await response.json();
+                    if (!response.ok) throw new Error(data.error.message || 'Error'); if (!data.valueRanges || data.valueRanges.length < 2) { errorDiv.textContent = 'รูปแบบข้อมูล API ไม่ถูกต้อง'; return; }
+                    const normalPrice = findBlindsPrice(data.valueRanges[0].values, lookupKey); const chainPrice = findBlindsPrice(data.valueRanges[1].values, lookupKey);
+                    let hasError = false;
+                    if (normalPrice !== null) { document.getElementById('price-normal').textContent = `฿${normalPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-normal').textContent = 'ไม่พบข้อมูล'; hasError = true; }
+                    if (chainPrice !== null) { document.getElementById('price-chain').textContent = `฿${chainPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-chain').textContent = 'ไม่พบข้อมูล'; hasError = true; }
+                    if (!hasError) {
+                        errorDiv.textContent = ''; blindsCalculatedData = { originalWidth: width, originalHeight: height, normalPrice, chainPrice };
+                        pdfBtn.disabled = false; saveBtn.disabled = false;
+                    } else { errorDiv.textContent = 'ไม่พบราคาสำหรับขนาดที่ระบุ'; }
+                } catch (error) { errorDiv.textContent = 'เชื่อมต่อฐานข้อมูลราคาไม่ได้: ' + error.message; } finally {
+                    resultsDiv.classList.remove('hidden'); loader.classList.add('hidden'); btnText.style.display = 'inline'; calcBtn.disabled = false;
                 }
             };
             
-            // --- Calculation Logic ---
-            const handleBlindsCalculation = async () => { /* ... same as previous ... */ }; // Implementation below
-            const handlePvcCalculation = () => { /* ... same as previous ... */ }; // Implementation below
-            const handleWoodCalculation = () => { /* ... same as previous ... */ }; // Implementation below
+            const calculateDynamicPrice = (priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) => {
+                errorDiv.textContent = ''; let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
+                if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
+                const rows = rowsContainer.querySelectorAll('div[id$="-row"]');
+                if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
+                let totalCost = 0, itemsForPdf = [], allRowsValid = true;
+                rows.forEach((row, index) => {
+                    const inputs = row.querySelectorAll('input');
+                    const originalWidth = parseFloat(inputs[0].value), originalHeight = parseFloat(inputs[1].value), qty = parseInt(inputs[2].value, 10);
+                    if([originalWidth, originalHeight, qty].some(isNaN) || [originalWidth, originalHeight, qty].some(v => v <= 0)) { inputs.forEach(i => i.classList.add('border-red-500')); allRowsValid = false; return; }
+                    inputs.forEach(i => i.classList.remove('border-red-500'));
+                    const widthInMeters = normalizeToMeters(originalWidth), heightInMeters = normalizeToMeters(originalHeight);
+                    const calcWidth = calcLogic.calcWidth(widthInMeters), calcHeight = calcLogic.calcHeight(heightInMeters);
+                    const itemCost = calcWidth * calcHeight * 1.2 * price * qty;
+                    totalCost += itemCost;
+                    itemsForPdf.push({ no: index + 1, width: originalWidth, height: originalHeight, qty, calcWidth, calcHeight, itemCost });
+                });
+                if (!allRowsValid) { errorDiv.textContent = 'กรุณากรอกข้อมูลในทุกช่องให้ถูกต้อง'; return null; }
+                const priceText = priceSelect.options[priceSelect.selectedIndex].text;
+                const dataForPdf = { price, priceText: priceSelect.value === 'custom' ? `อื่นๆ (${price})` : priceText, items: itemsForPdf, totalCost, ...dataObject };
+                return { totalCost, dataForPdf };
+            };
 
-            // --- Firebase & Admin Logic ---
+            const handlePvcCalculation = () => {
+                const result = calculateDynamicPrice(document.getElementById('pvcPriceSelect'), document.getElementById('pvcCustomPrice'), document.getElementById('pvc-rows-container'), document.getElementById('pvcErrorMessage'), { calcWidth: w => Math.max(1.0, w), calcHeight: h => calculatePvcHeight(h) }, { productCode: document.getElementById('pvcProductCode').value, openingStyle: document.querySelector('input[name="opening_style"]:checked').value });
+                 if (result) {
+                    document.getElementById('pvcTotalPrice').textContent = `฿${result.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                    document.getElementById('pvcResult').classList.remove('hidden');
+                    pvcCalculatedData = result.dataForPdf;
+                    document.getElementById('pvcPdfBtn').disabled = false;
+                    document.getElementById('pvcSaveBtn').disabled = false;
+                 }
+            };
+
+            const handleWoodCalculation = () => {
+                const result = calculateDynamicPrice(document.getElementById('woodPriceSelect'), document.getElementById('woodCustomPrice'), document.getElementById('wood-rows-container'), document.getElementById('woodErrorMessage'), { calcWidth: w => Math.max(0.8, w), calcHeight: h => Math.max(1.0, h) }, {});
+                 if (result) {
+                    document.getElementById('woodTotalPrice').textContent = `฿${result.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                    document.getElementById('woodResult').classList.remove('hidden');
+                    woodCalculatedData = result.dataForPdf;
+                    document.getElementById('woodPdfBtn').disabled = false;
+                    document.getElementById('woodSaveBtn').disabled = false;
+                 }
+            };
+            
             const initializeAppConfig = async () => {
                 const configRef = doc(db, `artifacts/${appId}/public/data/config/main`);
                 onSnapshot(configRef, (docSnap) => {
-                    if (docSnap.exists()) { appConfig = docSnap.data(); } 
-                    else {
-                        appConfig = {
-                            pageVisibility: { blinds: true, pvc: true, wood: true },
-                            prices: {
-                                pvc: [{ text: "320 - ฉากทึบ 10CM", value: 320 }, { text: "349 - ฉากทึบ 8.5CM", value: 349 }, { text: "799 - ฉากญี่ปุ่น", value: 799 }, { text: "899 - ฉากยูโร LA", value: 899 }, { text: "999 - ฉากยูโร LB", value: 999 }],
-                                wood: [{ text: "799 - ไม้โฟมวูด", value: 799 }, { text: "820 - ไม้บาสวูด", value: 820 }]
-                            }
-                        };
-                        setDoc(configRef, appConfig).catch(e => console.error("Error setting default config:", e));
-                    }
+                    appConfig = docSnap.exists() ? docSnap.data() : {
+                        pageVisibility: { blinds: true, pvc: true, wood: true },
+                        prices: {
+                            pvc: [{ text: "320 - ฉากทึบ 10CM", value: 320 }, { text: "349 - ฉากทึบ 8.5CM", value: 349 }, { text: "799 - ฉากญี่ปุ่น", value: 799 }, { text: "899 - ฉากยูโร LA", value: 899 }, { text: "999 - ฉากยูโร LB", value: 999 }],
+                            wood: [{ text: "799 - ไม้โฟมวูด", value: 799 }, { text: "820 - ไม้บาสวูด", value: 820 }]
+                        }
+                    };
+                    if (!docSnap.exists()) { setDoc(configRef, appConfig); }
                     updateUIWithConfig();
                 });
                 
@@ -217,14 +284,14 @@
                         el.innerHTML = `<div><p class="font-bold">${quote.title}</p><p class="text-xs text-slate-500">บันทึกเมื่อ: ${date}</p></div><div class="flex space-x-2"><button data-id="${doc.id}" class="view-quote-btn text-blue-500 hover:text-blue-700 px-2 py-1 rounded">ดู</button><button data-id="${doc.id}" class="delete-quote-btn text-red-500 hover:text-red-700 px-2 py-1 rounded">ลบ</button></div>`;
                         list.appendChild(el);
                     });
-                    document.querySelectorAll('.delete-quote-btn').forEach(btn => btn.addEventListener('click', deleteQuotation));
-                    document.querySelectorAll('.view-quote-btn').forEach(btn => btn.addEventListener('click', viewQuotation));
+                    list.querySelectorAll('.delete-quote-btn').forEach(btn => btn.addEventListener('click', deleteQuotation));
+                    list.querySelectorAll('.view-quote-btn').forEach(btn => btn.addEventListener('click', viewQuotation));
                 });
             };
 
             const updateUIWithConfig = () => {
-                let firstVisiblePage = null;
                 const visibility = appConfig.pageVisibility || { blinds: true, pvc: true, wood: true };
+                let firstVisiblePage = null;
                 Object.keys(visibility).forEach(pageKey => {
                     const isVisible = visibility[pageKey];
                     if (tabElements[pageKey]) { tabElements[pageKey].style.display = isVisible ? 'inline-block' : 'none'; }
@@ -239,19 +306,93 @@
                 if (woodSelect && appConfig.prices?.wood) { woodSelect.innerHTML = appConfig.prices.wood.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`; }
             };
 
-            const saveAdminChanges = async () => { /* ... implementation ... */ };
-            const openAdminPanel = () => { /* ... implementation ... */ };
-            const saveQuotation = async (type, data, title) => { /* ... implementation ... */ };
-            const deleteQuotation = async (event) => { /* ... implementation ... */ };
-            const viewQuotation = async (event) => { /* ... implementation ... */ };
-            
-            // --- BIND EVENT LISTENERS & INITIALIZE ---
-            // Binding and implementation details are here...
-            
-            // ... Full implementation of all functions ...
+            const saveAdminChanges = async () => {
+                const newConfig = JSON.parse(JSON.stringify(appConfig));
+                document.querySelectorAll('#visibility-controls input').forEach(input => { newConfig.pageVisibility[input.dataset.page] = input.checked; });
+                document.querySelectorAll('#pvc-price-controls .price-item').forEach((item, i) => { newConfig.prices.pvc[i].text = item.querySelector('.price-text').value; newConfig.prices.pvc[i].value = parseFloat(item.querySelector('.price-value').value); });
+                document.querySelectorAll('#wood-price-controls .price-item').forEach((item, i) => { newConfig.prices.wood[i].text = item.querySelector('.price-text').value; newConfig.prices.wood[i].value = parseFloat(item.querySelector('.price-value').value); });
+                await setDoc(doc(db, `artifacts/${appId}/public/data/config/main`), newConfig);
+                alert('บันทึกการเปลี่ยนแปลงแล้ว'); adminPanelModal.style.display = 'none';
+            };
 
-            // --- Bind Events ---
+            const openAdminPanel = () => {
+                if(!isLoggedIn) return;
+                const visibility = appConfig.pageVisibility || {};
+                const prices = appConfig.prices || { pvc: [], wood: [] };
+                const visContainer = document.getElementById('visibility-controls');
+                visContainer.innerHTML = Object.keys(tabElements).map(key => `<label class="flex items-center"><input type="checkbox" data-page="${key}" ${visibility[key] !== false ? 'checked' : ''} class="mr-2 h-4 w-4">${tabElements[key].textContent}</label>`).join('');
+                const pvcContainer = document.getElementById('pvc-price-controls');
+                pvcContainer.innerHTML = prices.pvc.map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                const woodContainer = document.getElementById('wood-price-controls');
+                woodContainer.innerHTML = prices.wood.map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                adminPanelModal.style.display = 'flex';
+            };
+
+            const saveQuotation = async (type, data, title) => {
+                try { await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { type, data, title, createdAt: new Date() }); alert('บันทึกใบเสนอราคาสำเร็จ!'); } 
+                catch (e) { console.error("Error adding document: ", e); alert('เกิดข้อผิดพลาดในการบันทึก'); }
+            };
+        
+            const deleteQuotation = async (event) => {
+                const id = event.target.dataset.id;
+                if (confirm(`คุณต้องการลบใบเสนอราคานี้ใช่หรือไม่?`)) {
+                    try { await deleteDoc(doc(db, `artifacts/${appId}/public/data/quotations`, id)); } 
+                    catch (e) { console.error("Error deleting document: ", e); }
+                }
+            };
+            
+            const viewQuotation = async (event) => {
+                const id = event.target.dataset.id;
+                const docRef = doc(db, `artifacts/${appId}/public/data/quotations`, id);
+                try {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const quote = docSnap.data();
+                        const contentDiv = document.getElementById('view-quote-content');
+                        let html = '';
+
+                        switch(quote.type) {
+                            case 'blinds':
+                                html = `
+                                    <p><strong>ประเภท:</strong> มู่ลี่อลูมิเนียม</p>
+                                    <p><strong>ขนาดที่กรอก:</strong> ${quote.data.originalWidth} x ${quote.data.originalHeight} ซม.</p>
+                                    <p><strong>ราคาธรรมดา:</strong> ${quote.data.normalPrice ? '฿'+quote.data.normalPrice.toLocaleString('en-US') : 'N/A'}</p>
+                                    <p><strong>ราคาโซ่:</strong> ${quote.data.chainPrice ? '฿'+quote.data.chainPrice.toLocaleString('en-US') : 'N/A'}</p>
+                                `;
+                                break;
+                            case 'pvc':
+                            case 'wood':
+                                const itemsHtml = quote.data.items.map(item => `
+                                    <tr>
+                                        <td class="border px-2 py-1">${item.no}</td>
+                                        <td class="border px-2 py-1">${item.width} x ${item.height}</td>
+                                        <td class="border px-2 py-1">${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}</td>
+                                        <td class="border px-2 py-1">${item.qty}</td>
+                                        <td class="border px-2 py-1 text-right">${item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                    </tr>
+                                `).join('');
+                                html = `
+                                    <p><strong>ประเภทสินค้า:</strong> ${quote.data.priceText}</p>
+                                    ${quote.type === 'pvc' ? `<p><strong>รหัสสินค้า:</strong> ${quote.data.productCode || '-'}</p><p><strong>รูปแบบการเปิด:</strong> ${quote.data.openingStyle}</p>` : ''}
+                                    <table class="w-full mt-4 border-collapse">
+                                        <thead><tr><th class="border p-1">ลำดับ</th><th class="border p-1">ขนาดที่กรอก</th><th class="border p-1">ขนาดที่คำนวณ</th><th class="border p-1">จำนวน</th><th class="border p-1">ราคารวม</th></tr></thead>
+                                        <tbody>${itemsHtml}</tbody>
+                                    </table>
+                                    <p class="text-right font-bold mt-4 text-lg">ยอดรวมสุทธิ: ฿${quote.data.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                                `;
+                                break;
+                        }
+                        
+                        document.getElementById('view-quote-title').textContent = quote.title;
+                        contentDiv.innerHTML = html;
+                        viewQuoteModal.style.display = 'flex';
+                    }
+                } catch(e) { console.error("Error viewing document: ", e); alert('ไม่สามารถเปิดดูรายละเอียดได้'); }
+            };
+
+            // --- BIND EVENT LISTENERS ---
             Object.keys(tabElements).forEach(key => tabElements[key].addEventListener('click', () => switchPage(`page-${key}`)));
+            
             document.getElementById('admin-login-btn').addEventListener('click', () => { adminLoginModal.style.display = 'flex'; });
             document.getElementById('login-close-btn').addEventListener('click', () => { adminLoginModal.style.display = 'none'; });
             document.getElementById('admin-panel-close-btn').addEventListener('click', () => { adminPanelModal.style.display = 'none'; });
@@ -296,7 +437,6 @@
             document.getElementById('woodSaveBtn').addEventListener('click', () => { if(woodCalculatedData) saveQuotation('wood', woodCalculatedData, `มู่ลี่ไม้ - ${woodCalculatedData.priceText}`); });
             
             // --- App Start ---
-            switchPage('page-blinds');
             initializeAppConfig();
             addPvcRow();
             addWoodRow();
