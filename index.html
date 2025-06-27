@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณราคาสินค้า</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .tab-active { border-bottom-color: #3b82f6; color: #3b82f6; font-weight: 700; }
+        .page-content, .modal-overlay { display: none; }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 50; display: none; }
+        .modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 60; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-2 md:p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <!-- Navigation Tabs -->
+        <div class="mb-4 border-b border-slate-200 flex justify-between items-center">
+            <nav class="-mb-px flex space-x-2 md:space-x-6" aria-label="Tabs">
+                <button id="tab-blinds" class="nav-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-slate-500 hover:text-blue-600 hover:border-blue-300" data-page="page-blinds">คำนวณมู่ลี่</button>
+                <button id="tab-pvc" class="nav-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-slate-500 hover:text-blue-600 hover:border-blue-300" data-page="page-pvc">คำนวณฉากกั้นแอร์</button>
+                <button id="tab-wood" class="nav-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-slate-500 hover:text-blue-600 hover:border-blue-300" data-page="page-wood">คำนวณมู่ลี่ไม้</button>
+            </nav>
+            <button id="admin-login-btn" class="text-sm text-slate-500 hover:text-blue-600 transition">ผู้ดูแล</button>
+        </div>
+
+        <!-- Page 1: Blinds Calculator -->
+        <div id="page-blinds" class="page-content bg-white rounded-2xl shadow-lg p-6 md:p-8">
+            <div class="text-center mb-8"><h1 class="text-2xl md:text-3xl font-bold text-slate-800">คำนวณราคามู่ลี่อลูมิเนียม</h1></div>
+            <div class="space-y-4">
+                <div><label for="blindsWidthInput" class="block font-medium text-slate-700 mb-1">ความกว้าง (ซม.)</label><input type="number" id="blindsWidthInput" placeholder="ตัวอย่าง: 52" class="w-full px-4 py-3 bg-slate-50 border rounded-lg"></div>
+                <div><label for="blindsHeightInput" class="block font-medium text-slate-700 mb-1">ความสูง (ซม.)</label><input type="number" id="blindsHeightInput" placeholder="ตัวอย่าง: 55" class="w-full px-4 py-3 bg-slate-50 border rounded-lg"></div>
+                <button id="blindsCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex justify-center items-center">
+                    <span id="blindsBtnText">คำนวณราคา</span>
+                    <div id="blindsLoader" class="loader hidden"></div>
+                </button>
+            </div>
+            <div id="blindsResults" class="mt-8 hidden"><div class="bg-slate-50 rounded-lg p-6"><h2 class="text-xl font-bold text-center mb-4">ผลการคำนวณ</h2><p id="blindsRoundedSize" class="text-center text-slate-500 mb-4"></p><div class="space-y-3"><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาธรรมดา:</span><span id="price-normal" class="text-xl font-bold text-green-600"></span></div><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาโซ่:</span><span id="price-chain" class="text-xl font-bold text-green-600"></span></div></div><div id="blindsErrorMessage" class="mt-4 text-center text-red-600 font-semibold"></div></div><div class="mt-6 flex space-x-2"><button id="blindsPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="blindsSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div></div>
+        </div>
+        
+        <!-- Page 2: PVC Door Calculator -->
+        <div id="page-pvc" class="page-content bg-white rounded-2xl shadow-lg p-6 md:p-8">
+            <div class="text-center mb-8"><h1 class="text-2xl md:text-3xl font-bold text-slate-800">คำนวณราคาฉากกั้นแอร์</h1></div>
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="pvcPriceSelect" class="block font-medium mb-1">เลือกราคา</label><select id="pvcPriceSelect" class="w-full px-4 py-3 bg-slate-50 border rounded-lg"></select></div>
+                    <div><label for="pvcCustomPrice" class="block font-medium mb-1">ราคาอื่นๆ</label><input type="number" id="pvcCustomPrice" placeholder="กรอกราคา" class="w-full px-4 py-3 bg-slate-200 border rounded-lg" disabled></div>
+                </div>
+                 <div><label for="pvcProductCode" class="block font-medium mb-1">รหัสสินค้า (ถ้ามี)</label><input type="text" id="pvcProductCode" placeholder="รหัสสินค้า" class="w-full px-4 py-3 bg-slate-50 border rounded-lg"></div>
+                <div><label class="block font-medium mb-2">รูปแบบการเปิด</label><div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm"><div><input type="radio" id="open-1" name="opening_style" value="เปิดข้างเดียว" class="mr-2" checked><label for="open-1">เปิดข้างเดียว</label></div><div><input type="radio" id="open-2" name="opening_style" value="เปิดกลาง" class="mr-2"><label for="open-2">เปิดกลาง</label></div><div><input type="radio" id="open-3" name="opening_style" value="เปิดข้างอิสระ" class="mr-2"><label for="open-3">เปิดข้างอิสระ</label></div><div><input type="radio" id="open-4" name="opening_style" value="เปิดอิสระ 4 ด้าน" class="mr-2"><label for="open-4">เปิดอิสระ 4 ด้าน</label></div></div></div>
+                <div id="pvc-rows-container" class="space-y-3"></div>
+                <button id="pvcAddRowBtn" class="w-full border-2 border-dashed rounded-lg py-2">+ เพิ่มรายการ</button>
+                <button id="pvcCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">คำนวณราคาทั้งหมด</button>
+                <div id="pvcResult" class="text-center hidden mt-4"><p class="text-slate-600">ราคารวมสุทธิ</p><p id="pvcTotalPrice" class="text-3xl font-bold text-green-600"></p></div>
+                <div id="pvcErrorMessage" class="text-center text-red-600 font-semibold"></div>
+                <div class="mt-6 flex space-x-2"><button id="pvcPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="pvcSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
+            </div>
+        </div>
+
+        <!-- Page 3: Wood Blinds Calculator -->
+        <div id="page-wood" class="page-content bg-white rounded-2xl shadow-lg p-6 md:p-8">
+            <div class="text-center mb-8"><h1 class="text-2xl md:text-3xl font-bold text-slate-800">คำนวณราคามู่ลี่ไม้</h1></div>
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="woodPriceSelect" class="block font-medium mb-1">เลือกราคา</label><select id="woodPriceSelect" class="w-full px-4 py-3 bg-slate-50 border rounded-lg"></select></div>
+                    <div><label for="woodCustomPrice" class="block font-medium mb-1">ราคาอื่นๆ</label><input type="number" id="woodCustomPrice" placeholder="กรอกราคา" class="w-full px-4 py-3 bg-slate-200 border rounded-lg" disabled></div>
+                </div>
+                <div id="wood-rows-container" class="space-y-3"></div>
+                <button id="woodAddRowBtn" class="w-full border-2 border-dashed rounded-lg py-2">+ เพิ่มรายการ</button>
+                <button id="woodCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">คำนวณราคาทั้งหมด</button>
+                <div id="woodResult" class="text-center hidden mt-4"><p>ราคารวมสุทธิ</p><p id="woodTotalPrice" class="text-3xl font-bold text-green-600"></p></div>
+                <div id="woodErrorMessage" class="text-center text-red-600 font-semibold"></div>
+                <div class="mt-6 flex space-x-2"><button id="woodPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="woodSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-6 text-sm text-slate-400">
+            <p>&copy; 2024 Product Calculator</p>
+        </footer>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="modal-overlay items-center justify-center">
+        <div class="modal-box bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center mb-6">ผู้ดูแลระบบ</h2>
+            <div class="space-y-4">
+                <div><label for="username">Username</label><input id="username" type="text" class="w-full p-3 border rounded-md"></div>
+                <div><label for="password">Password</label><input id="password" type="password" class="w-full p-3 border rounded-md"></div>
+                <p id="login-error" class="text-red-500 text-sm text-center"></p>
+                <button id="login-submit-btn" class="w-full bg-blue-600 text-white py-3 rounded-md font-bold">เข้าสู่ระบบ</button>
+                <button id="login-close-btn" class="w-full text-slate-500 py-2">ปิด</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Panel Modal -->
+    <div id="admin-panel-modal" class="modal-overlay items-start justify-center py-10 overflow-y-auto">
+        <div class="modal-box bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">แผงควบคุมผู้ดูแล</h2>
+                <button id="admin-panel-close-btn" class="text-2xl">&times;</button>
+            </div>
+            <!-- Page Visibility -->
+            <div class="mb-6"><h3 class="text-lg font-bold border-b pb-2 mb-3">การแสดงผลหน้าเว็บ</h3><div id="visibility-controls" class="space-y-2"></div></div>
+            <!-- Price Management -->
+            <div class="mb-6"><h3 class="text-lg font-bold border-b pb-2 mb-3">จัดการราคาฉากกั้นแอร์</h3><div id="pvc-price-controls" class="space-y-2"></div></div>
+            <div class="mb-6"><h3 class="text-lg font-bold border-b pb-2 mb-3">จัดการราคามู่ลี่ไม้</h3><div id="wood-price-controls" class="space-y-2"></div></div>
+            <button id="admin-save-btn" class="w-full bg-green-600 text-white py-3 rounded-md font-bold mb-8">บันทึกการเปลี่ยนแปลง</button>
+            <!-- Saved Quotations -->
+            <div><h3 class="text-lg font-bold border-b pb-2 mb-3">ใบเสนอราคาที่บันทึกไว้</h3><div id="saved-quotations-list" class="space-y-2 max-h-64 overflow-y-auto"></div></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- GLOBAL STATE ---
+        let appConfig = {};
+        let isLoggedIn = false;
+        let blindsCalculatedData = null, pvcCalculatedData = null, woodCalculatedData = null;
+        let pvcRowCount = 0, woodRowCount = 0;
+        
+        // --- DOM ELEMENTS (Consolidated) ---
+        const pageElements = {
+            blinds: document.getElementById('page-blinds'),
+            pvc: document.getElementById('page-pvc'),
+            wood: document.getElementById('page-wood')
+        };
+        const tabElements = {
+            blinds: document.getElementById('tab-blinds'),
+            pvc: document.getElementById('tab-pvc'),
+            wood: document.getElementById('tab-wood')
+        };
+        const adminLoginBtn = document.getElementById('admin-login-btn');
+        const adminLoginModal = document.getElementById('admin-login-modal');
+        const loginSubmitBtn = document.getElementById('login-submit-btn');
+        const loginCloseBtn = document.getElementById('login-close-btn');
+        const adminPanelModal = document.getElementById('admin-panel-modal');
+        const adminPanelCloseBtn = document.getElementById('admin-panel-close-btn');
+        
+        // --- CALCULATION HELPER FUNCTIONS ---
+        function blindsRoundDimension(num) {
+            if (num <= 0) return 0; const remainder = num % 10;
+            if (remainder === 0) return num; if (remainder <= 4) return num - remainder;
+            return num - remainder + 10;
+        }
+
+        function findBlindsPrice(dataRows, lookupKey) {
+            if (!dataRows || !Array.isArray(dataRows)) { return null; }
+            const searchKey = lookupKey.toLowerCase();
+            const foundRow = dataRows.find(row => {
+                if (row && row[0]) {
+                    const sheetKey = String(row[0]).toLowerCase().replace(/[^0-9x]/g, '');
+                    return sheetKey === searchKey;
+                }
+                return false;
+            });
+            if (foundRow && foundRow[1]) {
+                const rawPriceString = String(foundRow[1]);
+                const cleanedPriceString = rawPriceString.replace(/[^0-9.]/g, '');
+                if (cleanedPriceString) { const price = parseFloat(cleanedPriceString); return isNaN(price) ? null : price; }
+            }
+            return null;
+        }
+        
+        function normalizeToMeters(value) { return (value >= 10) ? value / 100 : value; }
+        
+        function calculatePvcHeight(h) {
+            if (h <= 2.01) return 2.0; if (h <= 2.20 || h === 2.21) return 2.2;
+            if (h <= 2.40 || h === 2.41) return 2.4; if (h <= 2.60 || h === 2.61) return 2.6;
+            if (h <= 2.80 || h === 2.81) return 2.8; if (h <= 3.00 || h === 3.01) return 3.0;
+            if (h <= 3.30 || h === 3.31) return 3.3; if (h <= 3.50 || h === 3.51) return 3.5;
+            if (h <= 3.70) return 3.7;
+            return h;
+        }
+
+        // --- MAIN HANDLER FUNCTIONS ---
+        async function handleBlindsCalculation() {
+            const blindsWidthInput = document.getElementById('blindsWidthInput');
+            const blindsHeightInput = document.getElementById('blindsHeightInput');
+            const blindsErrorMessageDiv = document.getElementById('blindsErrorMessage');
+            const blindsResultsDiv = document.getElementById('blindsResults');
+            const blindsPdfBtn = document.getElementById('blindsPdfBtn');
+            const blindsSaveBtn = document.getElementById('blindsSaveBtn');
+            const blindsLoader = document.getElementById('blindsLoader');
+            const blindsBtnText = document.getElementById('blindsBtnText');
+            
+            const width = parseInt(blindsWidthInput.value, 10);
+            const height = parseInt(blindsHeightInput.value, 10);
+            if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) { alert('กรุณากรอกความกว้างและความสูง'); return; }
+
+            blindsCalculatedData = null;
+            blindsPdfBtn.disabled = true;
+            blindsSaveBtn.disabled = true;
+            blindsErrorMessageDiv.textContent = '';
+            blindsResultsDiv.classList.add('hidden');
+            blindsLoader.classList.remove('hidden');
+            blindsBtnText.classList.add('hidden');
+            blindsCalculateBtn.disabled = true;
+
+            const roundedWidth = blindsRoundDimension(width);
+            const roundedHeight = blindsRoundDimension(height);
+            const lookupKey = `${roundedWidth}x${roundedHeight}`;
+            document.getElementById('blindsRoundedSize').textContent = `(ขนาดที่ใช้คำนวณ: ${roundedWidth}x${roundedHeight})`;
+            
+            const API_KEY = 'AIzaSyDo8Vmy2yspXDKJ-nq3Yp7lPqeCXmQIlsA';
+            const SPREADSHEET_ID = '10rXzhR4bqKNj17Kk7uSNnOIJQCMjIBYQCOt21g5Zmow';
+            const RANGES = ['sheet1!A:B', 'sheet2!A:B'];
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${RANGES.join('&ranges=')}&key=${API_KEY}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error.message || 'Error'); }
+                if (!data.valueRanges || data.valueRanges.length < 2) { blindsErrorMessageDiv.textContent = 'รูปแบบข้อมูล API ไม่ถูกต้อง'; return; }
+                
+                const normalPriceData = data.valueRanges[0].values || [];
+                const chainPriceData = data.valueRanges[1].values || [];
+                const normalPrice = findBlindsPrice(normalPriceData, lookupKey);
+                const chainPrice = findBlindsPrice(chainPriceData, lookupKey);
+                
+                let hasError = false;
+                if (normalPrice !== null) { document.getElementById('price-normal').textContent = `฿${normalPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-normal').textContent = 'ไม่พบข้อมูล'; hasError = true; }
+                if (chainPrice !== null) { document.getElementById('price-chain').textContent = `฿${chainPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-chain').textContent = 'ไม่พบข้อมูล'; hasError = true; }
+
+                if (hasError) {
+                    blindsErrorMessageDiv.textContent = 'ไม่พบราคาสำหรับขนาดที่ระบุ';
+                } else {
+                    blindsErrorMessageDiv.textContent = '';
+                    blindsCalculatedData = { originalWidth: width, originalHeight: height, normalPrice, chainPrice };
+                    blindsPdfBtn.disabled = false;
+                    blindsSaveBtn.disabled = false;
+                }
+            } catch (error) {
+                blindsErrorMessageDiv.textContent = 'เชื่อมต่อฐานข้อมูลราคาไม่ได้: ' + error.message;
+            } finally {
+                blindsResultsDiv.classList.remove('hidden');
+                blindsLoader.classList.add('hidden');
+                blindsBtnText.classList.remove('hidden');
+                document.getElementById('blindsCalculateBtn').disabled = false;
+            }
+        }
+        
+        function calculateDynamicPrice(priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) {
+            errorDiv.textContent = '';
+            let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
+            if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
+
+            const rows = rowsContainer.querySelectorAll('div[id$="-row"]');
+            if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
+
+            let totalCost = 0, itemsForPdf = [], allRowsValid = true;
+
+            rows.forEach((row, index) => {
+                const inputs = row.querySelectorAll('input');
+                const originalWidth = parseFloat(inputs[0].value);
+                const originalHeight = parseFloat(inputs[1].value);
+                const qty = parseInt(inputs[2].value, 10);
+
+                if([originalWidth, originalHeight, qty].some(isNaN) || [originalWidth, originalHeight, qty].some(v => v <= 0)) {
+                    inputs.forEach(i => i.classList.add('border-red-500'));
+                    allRowsValid = false; return;
+                }
+                inputs.forEach(i => i.classList.remove('border-red-500'));
+                
+                const widthInMeters = normalizeToMeters(originalWidth);
+                const heightInMeters = normalizeToMeters(originalHeight);
+                const calcWidth = calcLogic.calcWidth(widthInMeters);
+                const calcHeight = calcLogic.calcHeight(heightInMeters);
+                const itemCost = calcWidth * calcHeight * 1.2 * price * qty;
+                totalCost += itemCost;
+                itemsForPdf.push({ no: index + 1, width: originalWidth, height: originalHeight, qty, calcWidth, calcHeight, itemCost });
+            });
+
+            if (!allRowsValid) { errorDiv.textContent = 'กรุณากรอกข้อมูลในทุกช่องให้ถูกต้อง'; return null; }
+            
+            const priceText = priceSelect.options[priceSelect.selectedIndex].text;
+            const dataForPdf = {
+                price, priceText: priceSelect.value === 'custom' ? `อื่นๆ (${price})` : priceText,
+                items: itemsForPdf, totalCost,
+                productCode: dataObject.productCode,
+                openingStyle: dataObject.openingStyle,
+            };
+
+            return { totalCost, dataForPdf };
+        }
+
+        function handlePvcCalculation() {
+            const result = calculateDynamicPrice(
+                document.getElementById('pvcPriceSelect'), 
+                document.getElementById('pvcCustomPrice'), 
+                document.getElementById('pvc-rows-container'), 
+                document.getElementById('pvcErrorMessage'), 
+                { calcWidth: w => Math.max(1.0, w), calcHeight: h => calculatePvcHeight(h) },
+                { productCode: document.getElementById('pvcProductCode').value, openingStyle: document.querySelector('input[name="opening_style"]:checked').value }
+            );
+             if (result) {
+                document.getElementById('pvcTotalPrice').textContent = `฿${result.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('pvcResult').classList.remove('hidden');
+                pvcCalculatedData = result.dataForPdf;
+                document.getElementById('pvcPdfBtn').disabled = false;
+                document.getElementById('pvcSaveBtn').disabled = false;
+             }
+        }
+
+        function handleWoodCalculation() {
+            const result = calculateDynamicPrice(
+                document.getElementById('woodPriceSelect'), 
+                document.getElementById('woodCustomPrice'), 
+                document.getElementById('wood-rows-container'), 
+                document.getElementById('woodErrorMessage'), 
+                { calcWidth: w => Math.max(0.8, w), calcHeight: h => Math.max(1.0, h) },
+                {} // No extra data for wood blinds
+            );
+             if (result) {
+                document.getElementById('woodTotalPrice').textContent = `฿${result.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('woodResult').classList.remove('hidden');
+                woodCalculatedData = result.dataForPdf;
+                document.getElementById('woodPdfBtn').disabled = false;
+                document.getElementById('woodSaveBtn').disabled = false;
+             }
+        }
+        
+        // --- DYNAMIC ROW FUNCTIONS ---
+        function addRow(container, rowCounter, type) {
+            if (rowCounter >= 10) { alert('สามารถเพิ่มได้สูงสุด 10 รายการ'); return rowCounter; }
+            rowCounter++;
+            const rowId = `${type}-row-${rowCounter}`;
+            const rowHtml = `<div id="${rowId}" class="grid grid-cols-12 gap-2 items-center"><span class="col-span-1 text-center text-slate-500">${rowCounter}.</span><input type="number" step="any" placeholder="กว้าง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" step="any" placeholder="สูง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" value="1" placeholder="จำนวน" class="col-span-3 w-full p-2 border rounded-md"><button data-row-id="${rowId}" class="remove-row-btn col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`;
+            container.insertAdjacentHTML('beforeend', rowHtml);
+            container.querySelector(`button[data-row-id="${rowId}"]`).addEventListener('click', (e) => { e.target.parentElement.remove(); });
+            return rowCounter;
+        }
+        function addPvcRow() { pvcRowCount = addRow(document.getElementById('pvc-rows-container'), pvcRowCount, 'pvc'); }
+        function addWoodRow() { woodRowCount = addRow(document.getElementById('wood-rows-container'), woodRowCount, 'wood'); }
+
+        // --- PDF GENERATION ---
+        function generatePdf(title, company, columns, rows, total, filename, extraInfo = []) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text(title, 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text(company, 20, 30);
+            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            doc.text(`Date: ${today}`, 200, 30, { align: 'right' });
+
+            let startY = 40;
+            if (extraInfo.length > 0) {
+                doc.setFontSize(12);
+                extraInfo.forEach(info => {
+                    doc.text(`${info.label}: ${info.value || '-'}`, 20, startY);
+                    startY += 7;
+                });
+            }
+            
+            doc.autoTable({
+                head: [columns], body: rows, startY: startY + 5, theme: 'grid',
+                headStyles: { fillColor: [22, 160, 133] },
+            });
+            let finalY = doc.lastAutoTable.finalY;
+            doc.setFontSize(12);
+            doc.text('Grand Total:', 140, finalY + 10);
+            doc.text(`THB ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`, 200, finalY + 10, { align: 'right' });
+            doc.save(filename);
+        }
+        
+        // --- EVENT LISTENERS ---
+        // Navigation
+        Object.keys(tabElements).forEach(key => {
+            tabElements[key].addEventListener('click', () => switchPage(`page-${key}`));
+        });
+
+        // Admin
+        adminLoginBtn.addEventListener('click', () => adminLoginModal.style.display = 'flex');
+        loginCloseBtn.addEventListener('click', () => adminLoginModal.style.display = 'none');
+        adminPanelCloseBtn.addEventListener('click', closeAdminPanel);
+        loginSubmitBtn.addEventListener('click', () => {
+            if (document.getElementById('username').value === 'admin' && document.getElementById('password').value === '1988') {
+                isLoggedIn = true;
+                adminLoginModal.style.display = 'none';
+                openAdminPanel();
+            } else {
+                document.getElementById('login-error').textContent = 'Username หรือ Password ไม่ถูกต้อง';
+            }
+        });
+        document.getElementById('admin-save-btn').addEventListener('click', saveAdminChanges);
+
+        // Page 1: Blinds
+        document.getElementById('blindsCalculateBtn').addEventListener('click', handleBlindsCalculation);
+        document.getElementById('blindsPdfBtn').addEventListener('click', () => {
+             const data = blindsCalculatedData; if(!data) return;
+             const columns = ["No.", "Item", "Size (cm)", "Price (THB)"];
+             const rows = [];
+             let total = 0;
+             if(data.normalPrice !== null) { rows.push([1, 'Aluminum Blind (Standard)', `${data.originalWidth} x ${data.originalHeight}`, data.normalPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); total += data.normalPrice; }
+             if(data.chainPrice !== null) { rows.push([rows.length+1, 'Aluminum Blind (Chain)', `${data.originalWidth} x ${data.originalHeight}`, data.chainPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); total += data.chainPrice; }
+             generatePdf('Quotation - Aluminum Blinds', 'Blinds Design Co., Ltd.', columns, rows, total, 'Quotation-Blinds.pdf');
+        });
+        document.getElementById('blindsSaveBtn').addEventListener('click', () => {
+            if(blindsCalculatedData) saveQuotation('blinds', blindsCalculatedData, `มู่ลี่อลูมิเนียม ${blindsCalculatedData.originalWidth}x${blindsCalculatedData.originalHeight}`);
+        });
+
+        // Page 2: PVC
+        document.getElementById('pvcAddRowBtn').addEventListener('click', addPvcRow);
+        document.getElementById('pvcCalculateBtn').addEventListener('click', handlePvcCalculation);
+        document.getElementById('pvcPdfBtn').addEventListener('click', () => {
+            const data = pvcCalculatedData; if(!data) return;
+            const columns = ["No.", "Input Size", "Calc. Size (WxH)", "Qty", "Total (THB)"];
+            const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
+            const title = `Quotation - PVC Partition`;
+            const extraInfo = [
+                {label: 'Product Type', value: data.priceText},
+                {label: 'Product Code', value: data.productCode},
+                {label: 'Opening Style', value: data.openingStyle}
+            ];
+            generatePdf(title, 'Blinds Design Co., Ltd.', columns, rows, data.totalCost, 'Quotation-PVC.pdf', extraInfo);
+        });
+        document.getElementById('pvcSaveBtn').addEventListener('click', () => {
+            if(pvcCalculatedData) saveQuotation('pvc', pvcCalculatedData, `ฉากกั้นแอร์ - ${pvcCalculatedData.priceText}`);
+        });
+
+        // Page 3: Wood Blinds
+        document.getElementById('woodAddRowBtn').addEventListener('click', addWoodRow);
+        document.getElementById('woodCalculateBtn').addEventListener('click', handleWoodCalculation);
+        document.getElementById('woodPdfBtn').addEventListener('click', () => {
+            const data = woodCalculatedData; if(!data) return;
+            const columns = ["No.", "Input Size", "Calc. Size (WxH)", "Qty", "Total (THB)"];
+            const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
+            const title = `Quotation - Wood Blinds`;
+            const extraInfo = [{label: 'Product Type', value: data.priceText}];
+            generatePdf(title, 'Blinds Design Co., Ltd.', columns, rows, data.totalCost, 'Quotation-Wood-Blinds.pdf', extraInfo);
+        });
+        document.getElementById('woodSaveBtn').addEventListener('click', () => {
+            if(woodCalculatedData) saveQuotation('wood', woodCalculatedData, `มู่ลี่ไม้ - ${woodCalculatedData.priceText}`);
+        });
+
+        // --- INITIALIZATION ---
+        initializeAppConfig();
+        addPvcRow();
+        addWoodRow();
+
+    </script>
+</body>
+</html>
