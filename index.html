@@ -144,7 +144,8 @@
                 if (rowCounter >= 10) { alert('สามารถเพิ่มได้สูงสุด 10 รายการ'); return rowCounter; }
                 rowCounter++;
                 const rowId = `${type}-row-${rowCounter}`;
-                const rowHtml = `<div id="${rowId}" class="grid grid-cols-12 gap-2 items-center"><span class="col-span-1 text-center text-slate-500">${rowCounter}.</span><input type="number" step="any" placeholder="กว้าง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" step="any" placeholder="สูง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" value="1" placeholder="จำนวน" class="col-span-3 w-full p-2 border rounded-md"><button data-row-id="${rowId}" class="remove-row-btn col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`;
+                // ===== FIX: Added a common class 'calculation-row' to identify rows reliably =====
+                const rowHtml = `<div id="${rowId}" class="calculation-row grid grid-cols-12 gap-2 items-center"><span class="col-span-1 text-center text-slate-500">${rowCounter}.</span><input type="number" step="any" placeholder="กว้าง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" step="any" placeholder="สูง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" value="1" placeholder="จำนวน" class="col-span-3 w-full p-2 border rounded-md"><button data-row-id="${rowId}" class="remove-row-btn col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`;
                 container.insertAdjacentHTML('beforeend', rowHtml);
                 container.querySelector(`button[data-row-id="${rowId}"]`).addEventListener('click', (e) => e.target.parentElement.remove());
                 return rowCounter;
@@ -217,7 +218,8 @@
             const calculateDynamicPrice = (priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) => {
                 errorDiv.textContent = ''; let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
                 if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
-                const rows = rowsContainer.querySelectorAll('div[id$="-row"]');
+                // ===== FIX: Using the '.calculation-row' class selector =====
+                const rows = rowsContainer.querySelectorAll('.calculation-row');
                 if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
                 let totalCost = 0, itemsForPdf = [], allRowsValid = true;
                 rows.forEach((row, index) => {
@@ -322,9 +324,9 @@
                 const visContainer = document.getElementById('visibility-controls');
                 visContainer.innerHTML = Object.keys(tabElements).map(key => `<label class="flex items-center"><input type="checkbox" data-page="${key}" ${visibility[key] !== false ? 'checked' : ''} class="mr-2 h-4 w-4">${tabElements[key].textContent}</label>`).join('');
                 const pvcContainer = document.getElementById('pvc-price-controls');
-                pvcContainer.innerHTML = prices.pvc.map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                pvcContainer.innerHTML = (prices.pvc || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
                 const woodContainer = document.getElementById('wood-price-controls');
-                woodContainer.innerHTML = prices.wood.map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                woodContainer.innerHTML = (prices.wood || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
                 adminPanelModal.style.display = 'flex';
             };
 
