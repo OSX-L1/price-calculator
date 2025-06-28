@@ -100,19 +100,22 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- START: CONFIGURATION ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+        // ** ระบบได้ใส่ค่า Firebase Config ของคุณให้เรียบร้อยแล้ว **
+        const firebaseConfig = {
+            apiKey: "AIzaSyD2j3fg01Cl-mcl3z7iB-dIglS5zhyAu-g",
+            authDomain: "sunnyos.firebaseapp.com",
+            projectId: "sunnyos",
+            storageBucket: "sunnyos.firebasestorage.app",
+            messagingSenderId: "959732248277",
+            appId: "1:959732248277:web:87fa6cfd5e59e0617a7c5c",
+            measurementId: "G-M4782NST9C"
         };
         
+        // กำหนด ID ของแอปให้เป็นค่าคงที่ เพื่อให้ทุกอุปกรณ์เชื่อมต่อฐานข้อมูลที่เดียวกันเสมอ
         const appId = 'product-price-calculator-app'; 
         // --- END: CONFIGURATION ---
         
@@ -346,7 +349,6 @@
                     }
                 });
                 
-                // ** การแก้ไขที่สำคัญ ** // ดึงข้อมูลโดยไม่เรียงลำดับจากเซิร์ฟเวอร์
                 const q = query(collection(db, `artifacts/${appId}/public/data/quotations`));
                 onSnapshot(q, (querySnapshot) => {
                     const list = document.getElementById('saved-quotations-list');
@@ -355,20 +357,17 @@
                         return;
                     }
 
-                    // แปลงข้อมูลเป็น Array เพื่อนำมาเรียงลำดับ
                     const quotations = [];
                     querySnapshot.forEach((doc) => {
                         quotations.push({ id: doc.id, ...doc.data() });
                     });
 
-                    // เรียงลำดับข้อมูลในเบราว์เซอร์ (ใหม่ไปเก่า)
                     quotations.sort((a, b) => {
                         const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
                         const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
                         return dateB - dateA;
                     });
                     
-                    // แสดงผลข้อมูลที่เรียงลำดับแล้ว
                     list.innerHTML = '';
                     quotations.forEach((quote) => {
                         const date = quote.createdAt?.toDate ? quote.createdAt.toDate().toLocaleDateString('th-TH') : 'N/A';
@@ -411,13 +410,11 @@
 
             const saveQuotation = async (type, data, title) => {
                 try { 
-                    // Make sure createdAt is a valid Firestore Timestamp
-                    const { serverTimestamp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                     await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { 
                         type, 
                         data, 
                         title, 
-                        createdAt: serverTimestamp() // Use server timestamp for accuracy
+                        createdAt: serverTimestamp()
                     }); 
                     alert('บันทึกใบเสนอราคาสำเร็จ!'); 
                 } 
