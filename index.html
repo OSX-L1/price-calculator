@@ -100,12 +100,11 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- START: CONFIGURATION ---
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            // ใส่ Firebase Config ของคุณที่นี่เพื่อทดสอบบนเครื่อง
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_AUTH_DOMAIN",
             projectId: "YOUR_PROJECT_ID",
@@ -114,8 +113,6 @@
             appId: "YOUR_APP_ID"
         };
         
-        // ** การแก้ไขที่สำคัญ **
-        // กำหนด ID ของแอปให้เป็นค่าคงที่ เพื่อให้ทุกอุปกรณ์เชื่อมต่อฐานข้อมูลที่เดียวกันเสมอ
         const appId = 'product-price-calculator-app'; 
         // --- END: CONFIGURATION ---
         
@@ -349,19 +346,44 @@
                     }
                 });
                 
-                const q = query(collection(db, `artifacts/${appId}/public/data/quotations`), orderBy("createdAt", "desc"));
+                // ** การแก้ไขที่สำคัญ ** // ดึงข้อมูลโดยไม่เรียงลำดับจากเซิร์ฟเวอร์
+                const q = query(collection(db, `artifacts/${appId}/public/data/quotations`));
                 onSnapshot(q, (querySnapshot) => {
                     const list = document.getElementById('saved-quotations-list');
-                    list.innerHTML = querySnapshot.empty ? `<p class="text-slate-400 text-center">ยังไม่มีรายการที่บันทึก</p>` : '';
+                    if (querySnapshot.empty) {
+                        list.innerHTML = `<p class="text-slate-400 text-center">ยังไม่มีรายการที่บันทึก</p>`;
+                        return;
+                    }
+
+                    // แปลงข้อมูลเป็น Array เพื่อนำมาเรียงลำดับ
+                    const quotations = [];
                     querySnapshot.forEach((doc) => {
-                        const quote = doc.data(); const date = quote.createdAt.toDate().toLocaleDateString('th-TH');
+                        quotations.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    // เรียงลำดับข้อมูลในเบราว์เซอร์ (ใหม่ไปเก่า)
+                    quotations.sort((a, b) => {
+                        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+                        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+                        return dateB - dateA;
+                    });
+                    
+                    // แสดงผลข้อมูลที่เรียงลำดับแล้ว
+                    list.innerHTML = '';
+                    quotations.forEach((quote) => {
+                        const date = quote.createdAt?.toDate ? quote.createdAt.toDate().toLocaleDateString('th-TH') : 'N/A';
                         const el = document.createElement('div');
                         el.className = 'flex justify-between items-center p-2 bg-slate-100 rounded';
-                        el.innerHTML = `<div><p class="font-bold">${quote.title}</p><p class="text-xs text-slate-500">บันทึกเมื่อ: ${date}</p></div><div class="flex space-x-2"><button data-id="${doc.id}" class="view-quote-btn text-blue-500 hover:text-blue-700 px-2 py-1 rounded">ดู</button><button data-id="${doc.id}" class="delete-quote-btn text-red-500 hover:text-red-700 px-2 py-1 rounded">ลบ</button></div>`;
+                        el.innerHTML = `<div><p class="font-bold">${quote.title}</p><p class="text-xs text-slate-500">บันทึกเมื่อ: ${date}</p></div><div class="flex space-x-2"><button data-id="${quote.id}" class="view-quote-btn text-blue-500 hover:text-blue-700 px-2 py-1 rounded">ดู</button><button data-id="${quote.id}" class="delete-quote-btn text-red-500 hover:text-red-700 px-2 py-1 rounded">ลบ</button></div>`;
                         list.appendChild(el);
                     });
+
                     list.querySelectorAll('.delete-quote-btn').forEach(btn => btn.addEventListener('click', deleteQuotation));
                     list.querySelectorAll('.view-quote-btn').forEach(btn => btn.addEventListener('click', viewQuotation));
+
+                }, (error) => {
+                    console.error("Error fetching quotations: ", error);
+                    document.getElementById('saved-quotations-list').innerHTML = `<p class="text-red-500 text-center">เกิดข้อผิดพลาดในการดึงข้อมูลใบเสนอราคา</p>`;
                 });
             };
 
@@ -389,7 +411,14 @@
 
             const saveQuotation = async (type, data, title) => {
                 try { 
-                    await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { type, data, title, createdAt: new Date() }); 
+                    // Make sure createdAt is a valid Firestore Timestamp
+                    const { serverTimestamp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { 
+                        type, 
+                        data, 
+                        title, 
+                        createdAt: serverTimestamp() // Use server timestamp for accuracy
+                    }); 
                     alert('บันทึกใบเสนอราคาสำเร็จ!'); 
                 } 
                 catch (e) { 
