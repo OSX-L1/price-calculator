@@ -144,7 +144,6 @@
                 if (rowCounter >= 10) { alert('สามารถเพิ่มได้สูงสุด 10 รายการ'); return rowCounter; }
                 rowCounter++;
                 const rowId = `${type}-row-${rowCounter}`;
-                // ===== FIX: Added a common class 'calculation-row' to identify rows reliably =====
                 const rowHtml = `<div id="${rowId}" class="calculation-row grid grid-cols-12 gap-2 items-center"><span class="col-span-1 text-center text-slate-500">${rowCounter}.</span><input type="number" step="any" placeholder="กว้าง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" step="any" placeholder="สูง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" value="1" placeholder="จำนวน" class="col-span-3 w-full p-2 border rounded-md"><button data-row-id="${rowId}" class="remove-row-btn col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`;
                 container.insertAdjacentHTML('beforeend', rowHtml);
                 container.querySelector(`button[data-row-id="${rowId}"]`).addEventListener('click', (e) => e.target.parentElement.remove());
@@ -218,7 +217,6 @@
             const calculateDynamicPrice = (priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) => {
                 errorDiv.textContent = ''; let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
                 if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
-                // ===== FIX: Using the '.calculation-row' class selector =====
                 const rows = rowsContainer.querySelectorAll('.calculation-row');
                 if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
                 let totalCost = 0, itemsForPdf = [], allRowsValid = true;
@@ -262,17 +260,35 @@
             };
             
             const initializeAppConfig = async () => {
+                const defaultConfig = {
+                    pageVisibility: { blinds: true, pvc: true, wood: true },
+                    prices: {
+                        pvc: [
+                            { text: "320 - ฉากทึบ 10CM", value: 320 },
+                            { text: "349 - ฉากทึบ 8.5CM", value: 349 },
+                            { text: "799 - ฉากญี่ปุ่น", value: 799 },
+                            { text: "899 - ฉากยูโร LA", value: 899 },
+                            { text: "999 - ฉากยูโร LB", value: 999 }
+                        ],
+                        wood: [
+                            { text: "799 - ไม้โฟมวูด", value: 799 },
+                            { text: "820 - ไม้บาสวูด", value: 820 }
+                        ]
+                    }
+                };
+                appConfig = defaultConfig;
+                updateUIWithConfig();
+
                 const configRef = doc(db, `artifacts/${appId}/public/data/config/main`);
                 onSnapshot(configRef, (docSnap) => {
-                    appConfig = docSnap.exists() ? docSnap.data() : {
-                        pageVisibility: { blinds: true, pvc: true, wood: true },
-                        prices: {
-                            pvc: [{ text: "320 - ฉากทึบ 10CM", value: 320 }, { text: "349 - ฉากทึบ 8.5CM", value: 349 }, { text: "799 - ฉากญี่ปุ่น", value: 799 }, { text: "899 - ฉากยูโร LA", value: 899 }, { text: "999 - ฉากยูโร LB", value: 999 }],
-                            wood: [{ text: "799 - ไม้โฟมวูด", value: 799 }, { text: "820 - ไม้บาสวูด", value: 820 }]
-                        }
-                    };
-                    if (!docSnap.exists()) { setDoc(configRef, appConfig); }
-                    updateUIWithConfig();
+                    if (docSnap.exists()) {
+                        console.log("Firestore data received. Updating UI.");
+                        appConfig = docSnap.data();
+                        updateUIWithConfig();
+                    } else {
+                        console.log("No config found on Firestore. Creating one with default data.");
+                        setDoc(configRef, defaultConfig);
+                    }
                 });
                 
                 const q = query(collection(db, `artifacts/${appId}/public/data/quotations`), orderBy("createdAt", "desc"));
@@ -294,18 +310,30 @@
             const updateUIWithConfig = () => {
                 const visibility = appConfig.pageVisibility || { blinds: true, pvc: true, wood: true };
                 let firstVisiblePage = null;
+                
                 Object.keys(visibility).forEach(pageKey => {
                     const isVisible = visibility[pageKey];
                     if (tabElements[pageKey]) { tabElements[pageKey].style.display = isVisible ? 'inline-block' : 'none'; }
                     if(isVisible && !firstVisiblePage) firstVisiblePage = `page-${pageKey}`;
                 });
                 
-                switchPage(firstVisiblePage || 'page-blinds'); 
-                
                 const pvcSelect = document.getElementById('pvcPriceSelect');
-                if (pvcSelect && appConfig.prices?.pvc) { pvcSelect.innerHTML = appConfig.prices.pvc.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`; }
+                if (pvcSelect && appConfig.prices?.pvc) {
+                    const currentPvcValue = pvcSelect.value;
+                    pvcSelect.innerHTML = appConfig.prices.pvc.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`;
+                    if (Array.from(pvcSelect.options).some(opt => opt.value === currentPvcValue)) {
+                        pvcSelect.value = currentPvcValue;
+                    }
+                }
+
                 const woodSelect = document.getElementById('woodPriceSelect');
-                if (woodSelect && appConfig.prices?.wood) { woodSelect.innerHTML = appConfig.prices.wood.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`; }
+                if (woodSelect && appConfig.prices?.wood) {
+                    const currentWoodValue = woodSelect.value;
+                    woodSelect.innerHTML = appConfig.prices.wood.map(p => `<option value="${p.value}">${p.text}</option>`).join('') + `<option value="custom">ราคาอื่นๆ</option>`;
+                    if (Array.from(woodSelect.options).some(opt => opt.value === currentWoodValue)) {
+                        woodSelect.value = currentWoodValue;
+                    }
+                }
             };
 
             const saveAdminChanges = async () => {
@@ -334,7 +362,7 @@
                 try { await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { type, data, title, createdAt: new Date() }); alert('บันทึกใบเสนอราคาสำเร็จ!'); } 
                 catch (e) { console.error("Error adding document: ", e); alert('เกิดข้อผิดพลาดในการบันทึก'); }
             };
-        
+            
             const deleteQuotation = async (event) => {
                 const id = event.target.dataset.id;
                 if (confirm(`คุณต้องการลบใบเสนอราคานี้ใช่หรือไม่?`)) {
@@ -440,6 +468,7 @@
             
             // --- App Start ---
             initializeAppConfig();
+            switchPage('page-blinds'); // <<< บรรทัดที่เพิ่มเข้ามาเพื่อกำหนดหน้าเริ่มต้น
             addPvcRow();
             addWoodRow();
         });
