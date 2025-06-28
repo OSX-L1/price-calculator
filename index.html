@@ -101,21 +101,42 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Netlify will inject these. For local dev, you can replace them.
-        const firebaseConfig = typeof firebase_config !== 'undefined' ? JSON.parse(firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
-        const appId = typeof app_id !== 'undefined' ? app_id : 'default-app-id';
+        // --- START: CONFIGURATION ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // ใส่ Firebase Config ของคุณที่นี่เพื่อทดสอบบนเครื่อง
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // ** การแก้ไขที่สำคัญ **
+        // กำหนด ID ของแอปให้เป็นค่าคงที่ เพื่อให้ทุกอุปกรณ์เชื่อมต่อฐานข้อมูลที่เดียวกันเสมอ
+        const appId = 'product-price-calculator-app'; 
+        // --- END: CONFIGURATION ---
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+
+            try {
+                await signInAnonymously(auth);
+                console.log("Signed in anonymously to Firebase.");
+            } catch (error) {
+                console.error("Anonymous sign-in failed:", error);
+            }
 
             let appConfig = {};
             let isLoggedIn = false;
             let blindsCalculatedData = null, pvcCalculatedData = null, woodCalculatedData = null;
             let pvcRowCount = 0, woodRowCount = 0;
-            let initialPageSet = false; // Flag to ensure the initial page is set only once
+            let initialPageSet = false;
             
             const pageElements = {
                 blinds: document.getElementById('page-blinds'),
@@ -132,7 +153,7 @@
             const viewQuoteModal = document.getElementById('view-quote-modal');
 
             const switchPage = (pageId) => {
-                if (!pageId) return; // Do nothing if pageId is invalid
+                if (!pageId) return;
                 Object.values(pageElements).forEach(page => page.style.display = 'none');
                 Object.values(tabElements).forEach(tab => tab.classList.remove('tab-active'));
                 const currentPage = document.getElementById(pageId);
@@ -266,7 +287,6 @@
                 const visibility = appConfig.pageVisibility || { blinds: true, pvc: true, wood: true };
                 let firstVisiblePage = null;
 
-                // Update tab visibility and find the first available page
                 Object.keys(visibility).forEach(pageKey => {
                     const isVisible = visibility[pageKey];
                     if (tabElements[pageKey]) {
@@ -277,21 +297,18 @@
                     }
                 });
 
-                // Set the initial page once, respecting the user's request for 'blinds' if visible
                 if (!initialPageSet) {
                     const requestedStartPage = 'page-blinds';
-                    const isBlindsVisible = visibility.blinds !== false; // Default to true if not defined
+                    const isBlindsVisible = visibility.blinds !== false;
 
                     if (isBlindsVisible) {
                         switchPage(requestedStartPage);
                     } else {
-                        // Fallback to the first available page if 'blinds' is hidden
                         switchPage(firstVisiblePage);
                     }
                     initialPageSet = true;
                 }
 
-                // Update dropdown menus
                 const pvcSelect = document.getElementById('pvcPriceSelect');
                 if (pvcSelect && appConfig.prices?.pvc) {
                     const currentPvcValue = pvcSelect.value;
@@ -319,22 +336,19 @@
                     }
                 };
 
-                // Immediately load the UI with default data
                 appConfig = defaultConfig;
                 updateUIWithConfig();
 
-                // Listen for real-time updates from Firestore
                 const configRef = doc(db, `artifacts/${appId}/public/data/config/main`);
                 onSnapshot(configRef, (docSnap) => {
                     if (docSnap.exists()) {
                         appConfig = docSnap.data();
-                        updateUIWithConfig(); // Update UI with fresh data
+                        updateUIWithConfig();
                     } else {
-                        setDoc(configRef, defaultConfig); // Create config if it doesn't exist
+                        setDoc(configRef, defaultConfig);
                     }
                 });
                 
-                // Listen for saved quotations
                 const q = query(collection(db, `artifacts/${appId}/public/data/quotations`), orderBy("createdAt", "desc"));
                 onSnapshot(q, (querySnapshot) => {
                     const list = document.getElementById('saved-quotations-list');
@@ -374,15 +388,26 @@
             };
 
             const saveQuotation = async (type, data, title) => {
-                try { await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { type, data, title, createdAt: new Date() }); alert('บันทึกใบเสนอราคาสำเร็จ!'); } 
-                catch (e) { console.error("Error adding document: ", e); alert('เกิดข้อผิดพลาดในการบันทึก'); }
+                try { 
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/quotations`), { type, data, title, createdAt: new Date() }); 
+                    alert('บันทึกใบเสนอราคาสำเร็จ!'); 
+                } 
+                catch (e) { 
+                    console.error("Error adding document: ", e); 
+                    alert('เกิดข้อผิดพลาดในการบันทึก: ' + e.message); 
+                }
             };
             
             const deleteQuotation = async (event) => {
                 const id = event.target.dataset.id;
-                if (confirm(`คุณต้องการลบใบเสนอราคานี้ใช่หรือไม่?`)) {
-                    try { await deleteDoc(doc(db, `artifacts/${appId}/public/data/quotations`, id)); } 
-                    catch (e) { console.error("Error deleting document: ", e); }
+                if (window.confirm(`คุณต้องการลบใบเสนอราคานี้ใช่หรือไม่?`)) {
+                    try { 
+                        await deleteDoc(doc(db, `artifacts/${appId}/public/data/quotations`, id)); 
+                    } 
+                    catch (e) { 
+                        console.error("Error deleting document: ", e); 
+                        alert('เกิดข้อผิดพลาดในการลบ: ' + e.message);
+                    }
                 }
             };
             
