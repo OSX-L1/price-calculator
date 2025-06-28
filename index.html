@@ -102,7 +102,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Netlify will inject these. For local dev, you can replace them.
         const firebaseConfig = typeof firebase_config !== 'undefined' ? JSON.parse(firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
         const appId = typeof app_id !== 'undefined' ? app_id : 'default-app-id';
         
@@ -140,11 +139,11 @@
                 }
             };
 
+            // ===== FIX: Added 'type' parameter =====
             const addRow = (container, rowCounter, type) => {
                 if (rowCounter >= 10) { alert('สามารถเพิ่มได้สูงสุด 10 รายการ'); return rowCounter; }
                 rowCounter++;
-                const rowId = `${type}-row-${rowCounter}`;
-                // ===== FIX: Added a common class 'calculation-row' to identify rows reliably =====
+                const rowId = `row-${type}-${Date.now()}`;
                 const rowHtml = `<div id="${rowId}" class="calculation-row grid grid-cols-12 gap-2 items-center"><span class="col-span-1 text-center text-slate-500">${rowCounter}.</span><input type="number" step="any" placeholder="กว้าง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" step="any" placeholder="สูง (ม./ซม.)" class="col-span-3 w-full p-2 border rounded-md"><input type="number" value="1" placeholder="จำนวน" class="col-span-3 w-full p-2 border rounded-md"><button data-row-id="${rowId}" class="remove-row-btn col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`;
                 container.insertAdjacentHTML('beforeend', rowHtml);
                 container.querySelector(`button[data-row-id="${rowId}"]`).addEventListener('click', (e) => e.target.parentElement.remove());
@@ -218,7 +217,6 @@
             const calculateDynamicPrice = (priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) => {
                 errorDiv.textContent = ''; let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
                 if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
-                // ===== FIX: Using the '.calculation-row' class selector =====
                 const rows = rowsContainer.querySelectorAll('.calculation-row');
                 if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
                 let totalCost = 0, itemsForPdf = [], allRowsValid = true;
@@ -310,23 +308,62 @@
 
             const saveAdminChanges = async () => {
                 const newConfig = JSON.parse(JSON.stringify(appConfig));
+                newConfig.pageVisibility = newConfig.pageVisibility || {};
+                newConfig.prices = newConfig.prices || { pvc: [], wood: [] };
+
                 document.querySelectorAll('#visibility-controls input').forEach(input => { newConfig.pageVisibility[input.dataset.page] = input.checked; });
-                document.querySelectorAll('#pvc-price-controls .price-item').forEach((item, i) => { newConfig.prices.pvc[i].text = item.querySelector('.price-text').value; newConfig.prices.pvc[i].value = parseFloat(item.querySelector('.price-value').value); });
-                document.querySelectorAll('#wood-price-controls .price-item').forEach((item, i) => { newConfig.prices.wood[i].text = item.querySelector('.price-text').value; newConfig.prices.wood[i].value = parseFloat(item.querySelector('.price-value').value); });
+                
+                const pvcPrices = [];
+                document.querySelectorAll('#pvc-price-controls .price-item').forEach(item => {
+                    const text = item.querySelector('.price-text').value; const value = parseFloat(item.querySelector('.price-value').value);
+                    if(text && !isNaN(value)) pvcPrices.push({text, value});
+                });
+                newConfig.prices.pvc = pvcPrices;
+
+                const woodPrices = [];
+                document.querySelectorAll('#wood-price-controls .price-item').forEach(item => {
+                    const text = item.querySelector('.price-text').value; const value = parseFloat(item.querySelector('.price-value').value);
+                    if(text && !isNaN(value)) woodPrices.push({text, value});
+                });
+                newConfig.prices.wood = woodPrices;
+
                 await setDoc(doc(db, `artifacts/${appId}/public/data/config/main`), newConfig);
                 alert('บันทึกการเปลี่ยนแปลงแล้ว'); adminPanelModal.style.display = 'none';
+            };
+            
+            const addAdminPriceRow = (type) => {
+                const container = document.getElementById(`${type}-price-controls`);
+                const priceItem = document.createElement('div');
+                priceItem.className = 'price-item grid grid-cols-12 gap-2';
+                priceItem.innerHTML = `<input type="text" class="price-text col-span-7 w-full p-1 border rounded" placeholder="ชื่อรายการ"><input type="number" class="price-value col-span-3 w-full p-1 border rounded" placeholder="ราคา"><button class="col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button>`;
+                priceItem.querySelector('button').onclick = () => priceItem.remove();
+                container.appendChild(priceItem);
             };
 
             const openAdminPanel = () => {
                 if(!isLoggedIn) return;
                 const visibility = appConfig.pageVisibility || {};
                 const prices = appConfig.prices || { pvc: [], wood: [] };
+                
                 const visContainer = document.getElementById('visibility-controls');
                 visContainer.innerHTML = Object.keys(tabElements).map(key => `<label class="flex items-center"><input type="checkbox" data-page="${key}" ${visibility[key] !== false ? 'checked' : ''} class="mr-2 h-4 w-4">${tabElements[key].textContent}</label>`).join('');
+                
                 const pvcContainer = document.getElementById('pvc-price-controls');
-                pvcContainer.innerHTML = (prices.pvc || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                pvcContainer.innerHTML = (prices.pvc || []).map(p => `<div class="price-item grid grid-cols-12 gap-2"><input type="text" class="price-text col-span-7 w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value col-span-3 w-full p-1 border rounded" value="${p.value}"><button class="col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`).join('');
+                pvcContainer.querySelectorAll('.price-item button').forEach(btn => btn.onclick = () => btn.parentElement.remove());
+                const addPvcBtn = document.createElement('button');
+                addPvcBtn.className = 'mt-2 text-sm text-blue-600 hover:text-blue-800 w-full text-left'; addPvcBtn.textContent = '+ เพิ่มราคาใหม่';
+                addPvcBtn.onclick = () => addAdminPriceRow('pvc');
+                pvcContainer.appendChild(addPvcBtn);
+
                 const woodContainer = document.getElementById('wood-price-controls');
-                woodContainer.innerHTML = (prices.wood || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                woodContainer.innerHTML = (prices.wood || []).map(p => `<div class="price-item grid grid-cols-12 gap-2"><input type="text" class="price-text col-span-7 w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value col-span-3 w-full p-1 border rounded" value="${p.value}"><button class="col-span-2 text-red-500 hover:text-red-700 font-bold">ลบ</button></div>`).join('');
+                woodContainer.querySelectorAll('.price-item button').forEach(btn => btn.onclick = () => btn.parentElement.remove());
+                const addWoodBtn = document.createElement('button');
+                addWoodBtn.className = 'mt-2 text-sm text-blue-600 hover:text-blue-800 w-full text-left'; addWoodBtn.textContent = '+ เพิ่มราคาใหม่';
+                addWoodBtn.onclick = () => addAdminPriceRow('wood');
+                woodContainer.appendChild(addWoodBtn);
+
                 adminPanelModal.style.display = 'flex';
             };
 
@@ -355,36 +392,13 @@
 
                         switch(quote.type) {
                             case 'blinds':
-                                html = `
-                                    <p><strong>ประเภท:</strong> มู่ลี่อลูมิเนียม</p>
-                                    <p><strong>ขนาดที่กรอก:</strong> ${quote.data.originalWidth} x ${quote.data.originalHeight} ซม.</p>
-                                    <p><strong>ราคาธรรมดา:</strong> ${quote.data.normalPrice ? '฿'+quote.data.normalPrice.toLocaleString('en-US') : 'N/A'}</p>
-                                    <p><strong>ราคาโซ่:</strong> ${quote.data.chainPrice ? '฿'+quote.data.chainPrice.toLocaleString('en-US') : 'N/A'}</p>
-                                `;
+                                html = `<p><strong>ประเภท:</strong> มู่ลี่อลูมิเนียม</p><p><strong>ขนาดที่กรอก:</strong> ${quote.data.originalWidth} x ${quote.data.originalHeight} ซม.</p><p><strong>ราคาธรรมดา:</strong> ${quote.data.normalPrice ? '฿'+quote.data.normalPrice.toLocaleString('en-US') : 'N/A'}</p><p><strong>ราคาโซ่:</strong> ${quote.data.chainPrice ? '฿'+quote.data.chainPrice.toLocaleString('en-US') : 'N/A'}</p>`;
                                 break;
-                            case 'pvc':
-                            case 'wood':
-                                const itemsHtml = quote.data.items.map(item => `
-                                    <tr>
-                                        <td class="border px-2 py-1">${item.no}</td>
-                                        <td class="border px-2 py-1">${item.width} x ${item.height}</td>
-                                        <td class="border px-2 py-1">${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}</td>
-                                        <td class="border px-2 py-1">${item.qty}</td>
-                                        <td class="border px-2 py-1 text-right">${item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                    </tr>
-                                `).join('');
-                                html = `
-                                    <p><strong>ประเภทสินค้า:</strong> ${quote.data.priceText}</p>
-                                    ${quote.type === 'pvc' ? `<p><strong>รหัสสินค้า:</strong> ${quote.data.productCode || '-'}</p><p><strong>รูปแบบการเปิด:</strong> ${quote.data.openingStyle}</p>` : ''}
-                                    <table class="w-full mt-4 border-collapse">
-                                        <thead><tr><th class="border p-1">ลำดับ</th><th class="border p-1">ขนาดที่กรอก</th><th class="border p-1">ขนาดที่คำนวณ</th><th class="border p-1">จำนวน</th><th class="border p-1">ราคารวม</th></tr></thead>
-                                        <tbody>${itemsHtml}</tbody>
-                                    </table>
-                                    <p class="text-right font-bold mt-4 text-lg">ยอดรวมสุทธิ: ฿${quote.data.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
-                                `;
+                            case 'pvc': case 'wood':
+                                const itemsHtml = quote.data.items.map(item => `<tr><td class="border px-2 py-1">${item.no}</td><td class="border px-2 py-1">${item.width} x ${item.height}</td><td class="border px-2 py-1">${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}</td><td class="border px-2 py-1">${item.qty}</td><td class="border px-2 py-1 text-right">${item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</td></tr>`).join('');
+                                html = `<p><strong>ประเภทสินค้า:</strong> ${quote.data.priceText}</p>${quote.type === 'pvc' ? `<p><strong>รหัสสินค้า:</strong> ${quote.data.productCode || '-'}</p><p><strong>รูปแบบการเปิด:</strong> ${quote.data.openingStyle}</p>` : ''}<table class="w-full mt-4 border-collapse"><thead><tr><th class="border p-1">ลำดับ</th><th class="border p-1">ขนาดที่กรอก</th><th class="border p-1">ขนาดที่คำนวณ</th><th class="border p-1">จำนวน</th><th class="border p-1">ราคารวม</th></tr></thead><tbody>${itemsHtml}</tbody></table><p class="text-right font-bold mt-4 text-lg">ยอดรวมสุทธิ: ฿${quote.data.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>`;
                                 break;
                         }
-                        
                         document.getElementById('view-quote-title').textContent = quote.title;
                         contentDiv.innerHTML = html;
                         viewQuoteModal.style.display = 'flex';
