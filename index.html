@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <!-- **การแก้ไข: เพิ่มไลบรารี html2canvas สำหรับแคปภาพหน้าจอ** -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
@@ -781,6 +782,8 @@
             
             pdfCaptureBtn.addEventListener('click', () => {
                 const content = document.getElementById('pdf-preview-content');
+                if (!content) return;
+                
                 html2canvas(content, { scale: 2 }).then(canvas => {
                     const link = document.createElement('a');
                     link.download = (currentPdfData?.filename || 'quotation').replace('.pdf', '.png');
