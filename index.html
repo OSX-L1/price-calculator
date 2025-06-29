@@ -116,7 +116,7 @@
     
     <script>
         // **การแก้ไข: ฝังข้อมูลฟอนต์ภาษาไทยเข้ามาในโค้ดโดยตรง**
-        var Sarabun_Regular_normal = 'AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)'; 
+        var Sarabun_Regular_normal = `AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)`;
     </script>
     
     <script type="module">
@@ -299,7 +299,7 @@
                     const doc = new jsPDF();
 
                     // Font is now guaranteed to be available by being embedded.
-                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", Sarabun_Regular_normal);
+                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", window.Sarabun_Regular_normal);
                     doc.addFont("Sarabun-Regular-normal.ttf", "Sarabun-Regular", "normal");
                     doc.setFont("Sarabun-Regular", "normal");
 
@@ -762,12 +762,12 @@
             document.getElementById('blindsCalculateBtn').addEventListener('click', handleBlindsCalculation);
             document.getElementById('blindsPdfBtn').addEventListener('click', () => {
                 const data = blindsCalculatedData; if(!data) return;
-                const columns = ["No.", "Item", "Size (cm)", "Price (THB)"];
+                const columns = ["ลำดับ", "รายการ", "ขนาด (ซม.)", "ราคา (บาท)"];
                 const rows = [];
-                if(data.normalPrice !== null) { rows.push([1, 'Aluminum Blind (Standard)', `${data.originalWidth} x ${data.originalHeight}`, data.normalPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
-                if(data.chainPrice !== null) { rows.push([rows.length+1, 'Aluminum Blind (Chain)', `${data.originalWidth} x ${data.originalHeight}`, data.chainPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
+                if(data.normalPrice !== null) { rows.push([1, 'มู่ลี่อลูมิเนียม (ธรรมดา)', `${data.originalWidth} x ${data.originalHeight}`, data.normalPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
+                if(data.chainPrice !== null) { rows.push([rows.length+1, 'มู่ลี่อลูมิเนียม (โซ่)', `${data.originalWidth} x ${data.originalHeight}`, data.chainPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
                 const total = (data.normalPrice || 0) + (data.chainPrice || 0);
-                generatePdf('Quotation - Aluminum Blinds', columns, rows, total, 'Quotation-Blinds.pdf');
+                generatePdf('ใบเสนอราคา - มู่ลี่อลูมิเนียม', columns, rows, total, 'ใบเสนอราคา-มู่ลี่.pdf');
             });
             document.getElementById('blindsSaveBtn').addEventListener('click', () => { if(blindsCalculatedData) saveQuotation('blinds', blindsCalculatedData, `มู่ลี่อลูมิเนียม ${blindsCalculatedData.originalWidth}x${blindsCalculatedData.originalHeight}`); });
 
@@ -775,10 +775,10 @@
             document.getElementById('pvcCalculateBtn').addEventListener('click', handlePvcCalculation);
             document.getElementById('pvcPdfBtn').addEventListener('click', () => {
                 const data = pvcCalculatedData; if(!data) return;
-                const columns = ["No.", "Input Size", "Calc. Size", "Qty", "Total (THB)"];
+                const columns = ["ลำดับ", "ขนาดที่กรอก", "ขนาดที่คำนวณ", "จำนวน", "ราคารวม (บาท)"];
                 const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
-                const extraInfo = [{label: 'Product Type', value: data.priceText}, {label: 'Product Code', value: data.productCode}, {label: 'Opening Style', value: data.openingStyle}];
-                generatePdf('Quotation - PVC Partition', columns, rows, data.totalCost, 'Quotation-PVC.pdf', extraInfo);
+                const extraInfo = [{label: 'ประเภทสินค้า', value: data.priceText}, {label: 'รหัสสินค้า', value: data.productCode}, {label: 'รูปแบบการเปิด', value: data.openingStyle}];
+                generatePdf('ใบเสนอราคา - ฉากกั้นแอร์', columns, rows, data.totalCost, 'ใบเสนอราคา-ฉากกั้นแอร์.pdf', extraInfo);
             });
             document.getElementById('pvcSaveBtn').addEventListener('click', () => { if(pvcCalculatedData) saveQuotation('pvc', pvcCalculatedData, `ฉากกั้นแอร์ - ${pvcCalculatedData.priceText}`); });
 
@@ -786,10 +786,10 @@
             document.getElementById('woodCalculateBtn').addEventListener('click', handleWoodCalculation);
             document.getElementById('woodPdfBtn').addEventListener('click', () => {
                 const data = woodCalculatedData; if(!data) return;
-                const columns = ["No.", "Input Size", "Calc. Size", "Qty", "Total (THB)"];
+                const columns = ["ลำดับ", "ขนาดที่กรอก", "ขนาดที่คำนวณ", "จำนวน", "ราคารวม (บาท)"];
                 const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
-                const extraInfo = [{label: 'Product Type', value: data.priceText}];
-                generatePdf('Quotation - Wood Blinds', columns, rows, data.totalCost, 'Quotation-Wood-Blinds.pdf', extraInfo);
+                const extraInfo = [{label: 'ประเภทสินค้า', value: data.priceText}];
+                generatePdf('ใบเสนอราคา - มู่ลี่ไม้', columns, rows, data.totalCost, 'ใบเสนอราคา-มู่ลี่ไม้.pdf', extraInfo);
             });
             document.getElementById('woodSaveBtn').addEventListener('click', () => { if(woodCalculatedData) saveQuotation('wood', woodCalculatedData, `มู่ลี่ไม้ - ${woodCalculatedData.priceText}`); });
             
@@ -797,9 +797,9 @@
             document.getElementById('railCalculateBtn').addEventListener('click', handleRailCalculation);
             document.getElementById('railPdfBtn').addEventListener('click', () => {
                 const data = railCalculatedData; if(!data) return;
-                const columns = ["No.", "Item", "Width (cm)", "Qty", "Price (THB)"];
+                const columns = ["ลำดับ", "รายการ", "กว้าง (ซม.)", "จำนวน", "ราคา (บาท)"];
                 const rows = data.items.map(item => [item.no, item.description, item.width, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
-                generatePdf('Quotation - Curtain Rail', columns, rows, data.totalCost, 'Quotation-Rail.pdf');
+                generatePdf('ใบเสนอราคา - รางม่าน', columns, rows, data.totalCost, 'ใบเสนอราคา-รางม่าน.pdf');
             });
             document.getElementById('railSaveBtn').addEventListener('click', () => { if(railCalculatedData) saveQuotation('rail', railCalculatedData, `ใบเสนอราคารางม่าน`); });
 
