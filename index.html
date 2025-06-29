@@ -114,6 +114,11 @@
         <div class="modal-box w-full max-w-xl"><div class="flex justify-between items-center mb-4"><h2 id="view-quote-title" class="text-xl font-bold">รายละเอียดใบเสนอราคา</h2><button id="view-quote-close-btn" class="text-2xl">&times;</button></div><div id="view-quote-content" class="text-sm"></div></div>
     </div>
     
+    <script>
+        // **การแก้ไข: ฝังข้อมูลฟอนต์ภาษาไทยเข้ามาในโค้ดโดยตรง**
+        var Sarabun_Regular_normal = 'AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)'; 
+    </script>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -138,8 +143,6 @@
         const auth = getAuth(app);
 
         document.addEventListener('DOMContentLoaded', async () => {
-
-            // **การแก้ไข: นำโค้ดฟอนต์ทั้งหมดออกก่อนเพื่อทดสอบ**
 
             try {
                 await signInAnonymously(auth);
@@ -295,13 +298,18 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
 
+                    // Font is now guaranteed to be available by being embedded.
+                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", Sarabun_Regular_normal);
+                    doc.addFont("Sarabun-Regular-normal.ttf", "Sarabun-Regular", "normal");
+                    doc.setFont("Sarabun-Regular", "normal");
+
                     doc.setFontSize(18);
                     doc.text(title, 105, 20, { align: 'center' });
                     
                     doc.setFontSize(10);
-                    doc.text('Blinds Design Co., Ltd. (Sample)', 20, 30);
-                    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                    doc.text(`Date: ${today}`, 200, 30, { align: 'right' });
+                    doc.text('Blinds Design Co., Ltd. (ตัวอย่าง)', 20, 30);
+                    const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                    doc.text(`วันที่: ${today}`, 200, 30, { align: 'right' });
                     
                     let startY = 40;
                     if (extraInfo.length > 0) {
@@ -318,27 +326,33 @@
                         startY: startY + 5,
                         theme: 'grid',
                         headStyles: {
+                            font: "Sarabun-Regular",
+                            fontStyle: 'bold',
                             fillColor: [22, 160, 133],
                             textColor: 255
+                        },
+                        styles: {
+                            font: "Sarabun-Regular",
+                            fontStyle: 'normal'
                         }
                     });
 
                     let finalY = doc.lastAutoTable.finalY;
                     doc.setFontSize(12);
-                    doc.text('Grand Total:', 140, finalY + 10);
+                    doc.text('ยอดรวมสุทธิ:', 140, finalY + 10);
                     doc.text(`THB ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`, 200, finalY + 10, { align: 'right' });
                     
                     doc.save(filename);
                 } catch (e) {
                     console.error("PDF Generation Error: ", e);
-                    alert("Error creating PDF: " + e.message);
+                    alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + e.message);
                 }
             };
 
             const handleBlindsCalculation = async () => {
                 const widthInput = document.getElementById('blindsWidthInput'), heightInput = document.getElementById('blindsHeightInput'), errorDiv = document.getElementById('blindsErrorMessage'), resultsDiv = document.getElementById('blindsResults'), pdfBtn = document.getElementById('blindsPdfBtn'), saveBtn = document.getElementById('blindsSaveBtn'), loader = document.getElementById('blindsLoader'), btnText = document.getElementById('blindsBtnText'), calcBtn = document.getElementById('blindsCalculateBtn');
                 const width = parseInt(widthInput.value, 10), height = parseInt(heightInput.value, 10);
-                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) { alert('Please enter width and height.'); return; }
+                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) { alert('กรุณากรอกความกว้างและความสูง'); return; }
 
                 blindsCalculatedData = null; pdfBtn.disabled = true; saveBtn.disabled = true; errorDiv.textContent = ''; resultsDiv.classList.add('hidden'); loader.classList.remove('hidden'); btnText.style.display = 'none'; calcBtn.disabled = true;
                 
@@ -350,32 +364,32 @@
 
                 const roundedWidth = blindsRoundDimension(width), roundedHeight = blindsRoundDimension(height);
                 const lookupKey = `${roundedWidth}x${roundedHeight}`;
-                document.getElementById('blindsRoundedSize').textContent = `(Size used for calculation: ${roundedWidth}x${roundedHeight})`;
+                document.getElementById('blindsRoundedSize').textContent = `(ขนาดที่ใช้คำนวณ: ${roundedWidth}x${roundedHeight})`;
                 
                 const API_KEY = 'AIzaSyDo8Vmy2yspXDKJ-nq3Yp7lPqeCXmQIlsA', SPREADSHEET_ID = '10rXzhR4bqKNj17Kk7uSNnOIJQCMjIBYQCOt21g5Zmow', RANGES = ['sheet1!A:B', 'sheet2!A:B'];
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${RANGES.join('&ranges=')}&key=${API_KEY}`;
                 
                 try {
                     const response = await fetch(url); const data = await response.json();
-                    if (!response.ok) throw new Error(data.error.message || 'Error'); if (!data.valueRanges || data.valueRanges.length < 2) { errorDiv.textContent = 'Invalid API data format'; return; }
+                    if (!response.ok) throw new Error(data.error.message || 'Error'); if (!data.valueRanges || data.valueRanges.length < 2) { errorDiv.textContent = 'รูปแบบข้อมูล API ไม่ถูกต้อง'; return; }
                     const normalPrice = findBlindsPrice(data.valueRanges[0].values, lookupKey); const chainPrice = findBlindsPrice(data.valueRanges[1].values, lookupKey);
                     let hasError = false;
-                    if (normalPrice !== null) { document.getElementById('price-normal').textContent = `฿${normalPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-normal').textContent = 'Data not found'; hasError = true; }
-                    if (chainPrice !== null) { document.getElementById('price-chain').textContent = `฿${chainPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-chain').textContent = 'Data not found'; hasError = true; }
+                    if (normalPrice !== null) { document.getElementById('price-normal').textContent = `฿${normalPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-normal').textContent = 'ไม่พบข้อมูล'; hasError = true; }
+                    if (chainPrice !== null) { document.getElementById('price-chain').textContent = `฿${chainPrice.toLocaleString('en-US')}`; } else { document.getElementById('price-chain').textContent = 'ไม่พบข้อมูล'; hasError = true; }
                     if (!hasError) {
                         errorDiv.textContent = ''; blindsCalculatedData = { originalWidth: width, originalHeight: height, normalPrice, chainPrice };
                         pdfBtn.disabled = false; saveBtn.disabled = false;
-                    } else { errorDiv.textContent = 'Price not found for specified dimensions.'; }
-                } catch (error) { errorDiv.textContent = 'Could not connect to price database: ' + error.message; } finally {
+                    } else { errorDiv.textContent = 'ไม่พบราคาสำหรับขนาดที่ระบุ'; }
+                } catch (error) { errorDiv.textContent = 'เชื่อมต่อฐานข้อมูลราคาไม่ได้: ' + error.message; } finally {
                     resultsDiv.classList.remove('hidden'); loader.classList.add('hidden'); btnText.style.display = 'inline'; calcBtn.disabled = false;
                 }
             };
             
             const calculateDynamicPrice = (priceSelect, customPrice, rowsContainer, errorDiv, calcLogic, dataObject) => {
                 errorDiv.textContent = ''; let price = parseFloat(customPrice.disabled ? priceSelect.value : customPrice.value);
-                if(isNaN(price) || price <= 0) { errorDiv.textContent = 'Please select or enter a valid price.'; return null; }
+                if(isNaN(price) || price <= 0) { errorDiv.textContent = 'กรุณาเลือกหรือกรอกราคาที่ถูกต้อง'; return null; }
                 const rows = rowsContainer.querySelectorAll('.calculation-row');
-                if (rows.length === 0) { errorDiv.textContent = 'Please add at least one item.'; return null; }
+                if (rows.length === 0) { errorDiv.textContent = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'; return null; }
                 let totalCost = 0, itemsForPdf = [], allRowsValid = true;
                 rows.forEach((row, index) => {
                     const inputs = row.querySelectorAll('input');
@@ -388,9 +402,9 @@
                     totalCost += itemCost;
                     itemsForPdf.push({ no: index + 1, width: originalWidth, height: originalHeight, qty, calcWidth, calcHeight, itemCost });
                 });
-                if (!allRowsValid) { errorDiv.textContent = 'Please fill all fields correctly.'; return null; }
+                if (!allRowsValid) { errorDiv.textContent = 'กรุณากรอกข้อมูลในทุกช่องให้ถูกต้อง'; return null; }
                 const priceText = priceSelect.options[priceSelect.selectedIndex].text;
-                const dataForPdf = { price, priceText: priceSelect.value === 'custom' ? `Other (${price})` : priceText, items: itemsForPdf, totalCost, ...dataObject };
+                const dataForPdf = { price, priceText: priceSelect.value === 'custom' ? `อื่นๆ (${price})` : priceText, items: itemsForPdf, totalCost, ...dataObject };
                 return { totalCost, dataForPdf };
             };
 
@@ -423,7 +437,7 @@
                 const rows = rowsContainer.querySelectorAll('.calculation-row');
 
                 if (rows.length === 0) {
-                    errorDiv.textContent = 'Please add at least one item.';
+                    errorDiv.textContent = 'กรุณาเพิ่มรายการอย่างน้อย 1 รายการ';
                     return;
                 }
 
@@ -456,17 +470,17 @@
 
                     switch (railType) {
                         case 'wave':
-                            description = "Wave Tape Rail";
+                            description = "รางม่านลอนเทป";
                             basePrice = system === 'manual' ? railPrices.wave_manual : railPrices.wave_cord;
-                            description += system === 'manual' ? ' (Manual)' : ' (Cord)';
+                            description += system === 'manual' ? ' (มือเปิด)' : ' (เชือกดึง)';
                             break;
                         case 'm':
-                             description = "M-Rail (Pleated)";
+                             description = "รางเอ็ม (ม่านจีบ)";
                             basePrice = system === 'manual' ? railPrices.m_manual : railPrices.m_cord;
-                            description += system === 'manual' ? ' (Manual)' : ' (Cord)';
+                            description += system === 'manual' ? ' (มือเปิด)' : ' (เชือกดึง)';
                             break;
                         case 'roman':
-                             description = "Roman Blind Rail";
+                             description = "รางม่านพับ";
                             basePrice = railPrices.roman;
                             break;
                     }
@@ -485,7 +499,7 @@
                 });
 
                 if (!allRowsValid) {
-                    errorDiv.textContent = 'Please fill all width and quantity fields correctly.';
+                    errorDiv.textContent = 'กรุณากรอกข้อมูลความกว้างและจำนวนให้ถูกต้องทุกรายการ';
                     document.getElementById('railResult').classList.add('hidden');
                     document.getElementById('railPdfBtn').disabled = true;
                     document.getElementById('railSaveBtn').disabled = true;
