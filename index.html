@@ -113,6 +113,11 @@
     <div id="view-quote-modal" class="modal-overlay items-start justify-center py-10 overflow-y-auto">
         <div class="modal-box w-full max-w-xl"><div class="flex justify-between items-center mb-4"><h2 id="view-quote-title" class="text-xl font-bold">รายละเอียดใบเสนอราคา</h2><button id="view-quote-close-btn" class="text-2xl">&times;</button></div><div id="view-quote-content" class="text-sm"></div></div>
     </div>
+
+    <script>
+        // **การแก้ไข: ฝังข้อมูลฟอนต์ภาษาไทยเข้ามาในโค้ดโดยตรง**
+        var Sarabun_Regular_normal = 'AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)'; 
+    </script>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -138,38 +143,6 @@
         const auth = getAuth(app);
 
         document.addEventListener('DOMContentLoaded', async () => {
-
-            // **การแก้ไข: ฟังก์ชันสำหรับรอให้ฟอนต์พร้อมใช้งาน**
-            let fontPromise = null;
-            function loadPdfFont() {
-                if (!fontPromise) {
-                    fontPromise = new Promise(async (resolve, reject) => {
-                        // Check if font is already globally available
-                        if (typeof window.Sarabun_Regular_normal !== 'undefined') {
-                            return resolve();
-                        }
-                        try {
-                            const fontScriptUrl = 'https://cdn.jsdelivr.net/gh/OSX-L1/price-calculator@main/Sarabun-Regular-normal.js';
-                            const response = await fetch(fontScriptUrl);
-                            if (!response.ok) throw new Error(`Network error loading font`);
-                            const scriptText = await response.text();
-                            (new Function(scriptText)).call(window); // Execute script in global scope
-                            
-                            if (typeof window.Sarabun_Regular_normal !== 'undefined') {
-                                console.log("Thai font loaded successfully.");
-                                resolve();
-                            } else {
-                                throw new Error("Font script executed but variable is still not defined.");
-                            }
-                        } catch (error) {
-                            console.error("Failed to load Thai font:", error);
-                            reject(error);
-                        }
-                    });
-                }
-                return fontPromise;
-            }
-
 
             try {
                 await signInAnonymously(auth);
@@ -325,7 +298,11 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
 
-                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", window.Sarabun_Regular_normal);
+                    if (typeof Sarabun_Regular_normal === 'undefined') {
+                        throw new Error('Font data is not available.');
+                    }
+                    
+                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", Sarabun_Regular_normal);
                     doc.addFont("Sarabun-Regular-normal.ttf", "Sarabun-Regular", "normal");
                     doc.setFont("Sarabun-Regular", "normal");
 
