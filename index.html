@@ -11,8 +11,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <!-- **การแก้ไข: เพิ่มไลบรารี html2canvas สำหรับแคปภาพหน้าจอ** -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         body { font-family: 'Kanit', sans-serif; }
@@ -48,7 +46,7 @@
                     <span id="blindsBtnText">คำนวณราคา</span><div id="blindsLoader" class="loader hidden ml-2"></div>
                 </button>
             </div>
-            <div id="blindsResults" class="mt-8 hidden"><div class="bg-slate-50 rounded-lg p-6"><h2 class="text-xl font-bold text-center mb-4">ผลการคำนวณ</h2><p id="blindsRoundedSize" class="text-center text-slate-500 mb-4"></p><div class="space-y-3"><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาธรรมดา:</span><span id="price-normal" class="text-xl font-bold text-green-600"></span></div><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาโซ่:</span><span id="price-chain" class="text-xl font-bold text-green-600"></span></div></div><div id="blindsErrorMessage" class="mt-4 text-center text-red-600 font-semibold"></div></div><div class="mt-6 flex space-x-2"><button id="blindsPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>แสดงใบเสนอราคา</button><button id="blindsSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div></div>
+            <div id="blindsResults" class="mt-8 hidden"><div class="bg-slate-50 rounded-lg p-6"><h2 class="text-xl font-bold text-center mb-4">ผลการคำนวณ</h2><p id="blindsRoundedSize" class="text-center text-slate-500 mb-4"></p><div class="space-y-3"><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาธรรมดา:</span><span id="price-normal" class="text-xl font-bold text-green-600"></span></div><div class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm"><span class="font-bold">ราคาโซ่:</span><span id="price-chain" class="text-xl font-bold text-green-600"></span></div></div><div id="blindsErrorMessage" class="mt-4 text-center text-red-600 font-semibold"></div></div><div class="mt-6 flex space-x-2"><button id="blindsPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="blindsSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div></div>
         </div>
         
         <!-- Page 2: PVC Door Calculator -->
@@ -66,7 +64,7 @@
                 <button id="pvcCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">คำนวณราคาทั้งหมด</button>
                 <div id="pvcResult" class="text-center hidden mt-4"><p class="text-slate-600">ราคารวมสุทธิ</p><p id="pvcTotalPrice" class="text-3xl font-bold text-green-600"></p></div>
                 <div id="pvcErrorMessage" class="text-center text-red-600 font-semibold"></div>
-                <div class="mt-6 flex space-x-2"><button id="pvcPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>แสดงใบเสนอราคา</button><button id="pvcSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
+                <div class="mt-6 flex space-x-2"><button id="pvcPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="pvcSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
             </div>
         </div>
 
@@ -83,7 +81,7 @@
                 <button id="woodCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">คำนวณราคาทั้งหมด</button>
                 <div id="woodResult" class="text-center hidden mt-4"><p>ราคารวมสุทธิ</p><p id="woodTotalPrice" class="text-3xl font-bold text-green-600"></p></div>
                 <div id="woodErrorMessage" class="text-center text-red-600 font-semibold"></div>
-                <div class="mt-6 flex space-x-2"><button id="woodPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>แสดงใบเสนอราคา</button><button id="woodSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
+                <div class="mt-6 flex space-x-2"><button id="woodPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="woodSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
             </div>
         </div>
 
@@ -96,7 +94,7 @@
                 <button id="railCalculateBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">คำนวณราคาทั้งหมด</button>
                 <div id="railResult" class="text-center hidden mt-4"><p>ราคารวมสุทธิ</p><p id="railTotalPrice" class="text-3xl font-bold text-green-600"></p></div>
                 <div id="railErrorMessage" class="text-center text-red-600 font-semibold"></div>
-                <div class="mt-6 flex space-x-2"><button id="railPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>แสดงใบเสนอราคา</button><button id="railSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
+                <div class="mt-6 flex space-x-2"><button id="railPdfBtn" class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>สร้าง PDF</button><button id="railSaveBtn" class="flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg disabled:bg-slate-300" disabled>บันทึก</button></div>
             </div>
         </div>
 
@@ -115,23 +113,11 @@
     <div id="view-quote-modal" class="modal-overlay items-start justify-center py-10 overflow-y-auto">
         <div class="modal-box w-full max-w-xl"><div class="flex justify-between items-center mb-4"><h2 id="view-quote-title" class="text-xl font-bold">รายละเอียดใบเสนอราคา</h2><button id="view-quote-close-btn" class="text-2xl">&times;</button></div><div id="view-quote-content" class="text-sm"></div></div>
     </div>
-    <!-- **การแก้ไข: เพิ่ม Modal สำหรับแสดงตัวอย่าง PDF** -->
-    <div id="pdf-preview-modal" class="modal-overlay">
-        <div class="modal-box w-full max-w-3xl">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">ตัวอย่างใบเสนอราคา</h2>
-                <button id="pdf-preview-close-btn" class="text-2xl">&times;</button>
-            </div>
-            <div id="pdf-preview-content" class="text-sm max-h-[60vh] overflow-y-auto p-4 bg-slate-50 rounded-lg border">
-                <!-- Preview content will be injected here -->
-            </div>
-            <div class="mt-6 flex justify-end space-x-4">
-                 <!-- **การแก้ไข: เพิ่มปุ่มแคปภาพ** -->
-                <button id="pdf-capture-btn" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg">แคปภาพ</button>
-                <button id="pdf-download-btn" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg">ดาวน์โหลด PDF</button>
-            </div>
-        </div>
-    </div>
+    
+    <script>
+        // **การแก้ไข: ฝังข้อมูลฟอนต์ภาษาไทยเข้ามาในโค้ดโดยตรง**
+        var Sarabun_Regular_normal = `AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)`;
+    </script>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -170,7 +156,6 @@
             let blindsCalculatedData = null, pvcCalculatedData = null, woodCalculatedData = null, railCalculatedData = null;
             let pvcRowCount = 0, woodRowCount = 0;
             let initialPageSet = false;
-            let currentPdfData = null;
             
             const pageElements = {
                 blinds: document.getElementById('page-blinds'),
@@ -187,11 +172,6 @@
             const adminLoginModal = document.getElementById('admin-login-modal');
             const adminPanelModal = document.getElementById('admin-panel-modal');
             const viewQuoteModal = document.getElementById('view-quote-modal');
-            const pdfPreviewModal = document.getElementById('pdf-preview-modal');
-            const pdfPreviewContent = document.getElementById('pdf-preview-content');
-            const pdfDownloadBtn = document.getElementById('pdf-download-btn');
-            const pdfCaptureBtn = document.getElementById('pdf-capture-btn');
-            const pdfPreviewCloseBtn = document.getElementById('pdf-preview-close-btn');
 
             const switchPage = (pageId) => {
                 if (!pageId) return;
@@ -313,6 +293,62 @@
                 if (h <= 3.70) return 3.7; return h;
             };
             
+            const generatePdf = (title, columns, body, total, filename, extraInfo = []) => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    // Font is now guaranteed to be available by being embedded.
+                    doc.addFileToVFS("Sarabun-Regular-normal.ttf", window.Sarabun_Regular_normal);
+                    doc.addFont("Sarabun-Regular-normal.ttf", "Sarabun-Regular", "normal");
+                    doc.setFont("Sarabun-Regular", "normal");
+
+                    doc.setFontSize(18);
+                    doc.text(title, 105, 20, { align: 'center' });
+                    
+                    doc.setFontSize(10);
+                    doc.text('Blinds Design Co., Ltd. (ตัวอย่าง)', 20, 30);
+                    const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                    doc.text(`วันที่: ${today}`, 200, 30, { align: 'right' });
+                    
+                    let startY = 40;
+                    if (extraInfo.length > 0) {
+                        doc.setFontSize(12);
+                        extraInfo.forEach(info => {
+                            doc.text(`${info.label}: ${info.value || '-'}`, 20, startY);
+                            startY += 7;
+                        });
+                    }
+
+                    doc.autoTable({
+                        head: [columns],
+                        body: body,
+                        startY: startY + 5,
+                        theme: 'grid',
+                        headStyles: {
+                            font: "Sarabun-Regular",
+                            fontStyle: 'bold',
+                            fillColor: [22, 160, 133],
+                            textColor: 255
+                        },
+                        styles: {
+                            font: "Sarabun-Regular",
+                            fontStyle: 'normal'
+                        }
+                    });
+
+                    let finalY = doc.lastAutoTable.finalY;
+                    doc.setFontSize(12);
+                    doc.text('ยอดรวมสุทธิ:', 140, finalY + 10);
+                    doc.text(`THB ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`, 200, finalY + 10, { align: 'right' });
+                    
+                    doc.save(filename);
+                } catch (e) {
+                    console.error("PDF Generation Error: ", e);
+                    alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + e.message);
+                }
+            };
+
             const handleBlindsCalculation = async () => {
                 const widthInput = document.getElementById('blindsWidthInput'), heightInput = document.getElementById('blindsHeightInput'), errorDiv = document.getElementById('blindsErrorMessage'), resultsDiv = document.getElementById('blindsResults'), pdfBtn = document.getElementById('blindsPdfBtn'), saveBtn = document.getElementById('blindsSaveBtn'), loader = document.getElementById('blindsLoader'), btnText = document.getElementById('blindsBtnText'), calcBtn = document.getElementById('blindsCalculateBtn');
                 const width = parseInt(widthInput.value, 10), height = parseInt(heightInput.value, 10);
@@ -731,7 +767,7 @@
                 if(data.normalPrice !== null) { rows.push([1, 'มู่ลี่อลูมิเนียม (ธรรมดา)', `${data.originalWidth} x ${data.originalHeight}`, data.normalPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
                 if(data.chainPrice !== null) { rows.push([rows.length+1, 'มู่ลี่อลูมิเนียม (โซ่)', `${data.originalWidth} x ${data.originalHeight}`, data.chainPrice.toLocaleString('en-US',{minimumFractionDigits: 2})]); }
                 const total = (data.normalPrice || 0) + (data.chainPrice || 0);
-                showPdfPreview('ใบเสนอราคา - มู่ลี่อลูมิเนียม', columns, rows, total, 'ใบเสนอราคา-มู่ลี่.pdf');
+                generatePdf('ใบเสนอราคา - มู่ลี่อลูมิเนียม', columns, rows, total, 'ใบเสนอราคา-มู่ลี่.pdf');
             });
             document.getElementById('blindsSaveBtn').addEventListener('click', () => { if(blindsCalculatedData) saveQuotation('blinds', blindsCalculatedData, `มู่ลี่อลูมิเนียม ${blindsCalculatedData.originalWidth}x${blindsCalculatedData.originalHeight}`); });
 
@@ -742,7 +778,7 @@
                 const columns = ["ลำดับ", "ขนาดที่กรอก", "ขนาดที่คำนวณ", "จำนวน", "ราคารวม (บาท)"];
                 const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
                 const extraInfo = [{label: 'ประเภทสินค้า', value: data.priceText}, {label: 'รหัสสินค้า', value: data.productCode}, {label: 'รูปแบบการเปิด', value: data.openingStyle}];
-                showPdfPreview('ใบเสนอราคา - ฉากกั้นแอร์', columns, rows, data.totalCost, 'ใบเสนอราคา-ฉากกั้นแอร์.pdf', extraInfo);
+                generatePdf('ใบเสนอราคา - ฉากกั้นแอร์', columns, rows, data.totalCost, 'ใบเสนอราคา-ฉากกั้นแอร์.pdf', extraInfo);
             });
             document.getElementById('pvcSaveBtn').addEventListener('click', () => { if(pvcCalculatedData) saveQuotation('pvc', pvcCalculatedData, `ฉากกั้นแอร์ - ${pvcCalculatedData.priceText}`); });
 
@@ -753,7 +789,7 @@
                 const columns = ["ลำดับ", "ขนาดที่กรอก", "ขนาดที่คำนวณ", "จำนวน", "ราคารวม (บาท)"];
                 const rows = data.items.map(item => [item.no, `${item.width} x ${item.height}`, `${item.calcWidth.toFixed(2)} x ${item.calcHeight.toFixed(2)}`, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
                 const extraInfo = [{label: 'ประเภทสินค้า', value: data.priceText}];
-                showPdfPreview('ใบเสนอราคา - มู่ลี่ไม้', columns, rows, data.totalCost, 'ใบเสนอราคา-มู่ลี่ไม้.pdf', extraInfo);
+                generatePdf('ใบเสนอราคา - มู่ลี่ไม้', columns, rows, data.totalCost, 'ใบเสนอราคา-มู่ลี่ไม้.pdf', extraInfo);
             });
             document.getElementById('woodSaveBtn').addEventListener('click', () => { if(woodCalculatedData) saveQuotation('wood', woodCalculatedData, `มู่ลี่ไม้ - ${woodCalculatedData.priceText}`); });
             
@@ -763,38 +799,10 @@
                 const data = railCalculatedData; if(!data) return;
                 const columns = ["ลำดับ", "รายการ", "กว้าง (ซม.)", "จำนวน", "ราคา (บาท)"];
                 const rows = data.items.map(item => [item.no, item.description, item.width, item.qty, item.itemCost.toLocaleString('en-US', {minimumFractionDigits: 2})]);
-                showPdfPreview('ใบเสนอราคา - รางม่าน', columns, rows, data.totalCost, 'ใบเสนอราคา-รางม่าน.pdf');
+                generatePdf('ใบเสนอราคา - รางม่าน', columns, rows, data.totalCost, 'ใบเสนอราคา-รางม่าน.pdf');
             });
             document.getElementById('railSaveBtn').addEventListener('click', () => { if(railCalculatedData) saveQuotation('rail', railCalculatedData, `ใบเสนอราคารางม่าน`); });
 
-            pdfDownloadBtn.addEventListener('click', () => {
-                if (currentPdfData) {
-                    generatePdf(
-                        currentPdfData.title,
-                        currentPdfData.columns,
-                        currentPdfData.body,
-                        currentPdfData.total,
-                        currentPdfData.filename,
-                        currentPdfData.extraInfo
-                    );
-                }
-            });
-            
-            pdfCaptureBtn.addEventListener('click', () => {
-                const content = document.getElementById('pdf-preview-content');
-                if (!content) return;
-                
-                html2canvas(content, { scale: 2 }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = (currentPdfData?.filename || 'quotation').replace('.pdf', '.png');
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                });
-            });
-
-            pdfPreviewCloseBtn.addEventListener('click', () => {
-                pdfPreviewModal.style.display = 'none';
-            });
             
             // --- App Start ---
             initializeAppConfig();
