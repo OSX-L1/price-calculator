@@ -125,7 +125,8 @@
     </div>
     
     <script>
-        var Sarabun_Regular_normal = 'AAEAAAARAQAABAAQR0RFRg... (The full Base64 encoded font data from your GitHub is now embedded here)';
+        // Base64 encoded font data should be placed here. It's omitted for brevity.
+        var Sarabun_Regular_normal = 'AAEAAAARAQAABAAQR0RFRg...'; 
     </script>
     
     <script type="module">
@@ -186,9 +187,42 @@
             const pdfPreviewContent = document.getElementById('pdf-preview-content');
             const pdfDownloadBtn = document.getElementById('pdf-download-btn');
             const pdfPreviewCloseBtn = document.getElementById('pdf-preview-close-btn');
-
-            // **ส่วนที่เพิ่มใหม่**: ประกาศตัวแปรสำหรับปุ่มแคปภาพและส่วนประกอบที่เกี่ยวข้อง
             const pdfCaptureBtn = document.getElementById('pdf-capture-btn');
+
+            // --- START: ADMIN PANEL DYNAMIC EVENT LISTENERS ---
+            // This handles clicks inside the admin modal for dynamically added/removed content
+            adminPanelModal.addEventListener('click', (e) => {
+                // Handle deleting a price item in the admin panel
+                if (e.target.classList.contains('delete-price-btn')) {
+                    e.target.closest('.price-item').remove();
+                }
+
+                // Handle adding a new PVC price row
+                if (e.target.id === 'add-pvc-price-btn') {
+                    const container = document.querySelector('#pvc-price-controls .price-list-container');
+                    const newRowHTML = `
+                        <div class="price-item grid grid-cols-12 gap-2 items-center">
+                            <input type="text" class="price-text w-full p-1 border rounded col-span-6" placeholder="ชื่อรายการ">
+                            <input type="number" step="any" class="price-value w-full p-1 border rounded col-span-4" placeholder="ราคา">
+                            <button type="button" class="delete-price-btn col-span-2 text-sm text-red-500 hover:text-red-700 font-semibold">ลบ</button>
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', newRowHTML);
+                }
+
+                // Handle adding a new Wood price row
+                if (e.target.id === 'add-wood-price-btn') {
+                    const container = document.querySelector('#wood-price-controls .price-list-container');
+                    const newRowHTML = `
+                        <div class="price-item grid grid-cols-12 gap-2 items-center">
+                            <input type="text" class="price-text w-full p-1 border rounded col-span-6" placeholder="ชื่อรายการ">
+                            <input type="number" step="any" class="price-value w-full p-1 border rounded col-span-4" placeholder="ราคา">
+                            <button type="button" class="delete-price-btn col-span-2 text-sm text-red-500 hover:text-red-700 font-semibold">ลบ</button>
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', newRowHTML);
+                }
+            });
+            // --- END: ADMIN PANEL DYNAMIC EVENT LISTENERS ---
+
 
             const switchPage = (pageId) => {
                 if (!pageId) return;
@@ -626,7 +660,7 @@
                     if (docSnap.exists()) {
                         appConfig = docSnap.data();
                          if (!appConfig.prices.rail) {
-                             appConfig.prices.rail = defaultConfig.prices.rail;
+                              appConfig.prices.rail = defaultConfig.prices.rail;
                          }
                         updateUIWithConfig();
                     } else {
@@ -670,32 +704,90 @@
                     document.getElementById('saved-quotations-list').innerHTML = `<p class="text-red-500 text-center">เกิดข้อผิดพลาดในการดึงข้อมูลใบเสนอราคา</p>`;
                 });
             };
-
+            
             const saveAdminChanges = async () => {
                 const newConfig = JSON.parse(JSON.stringify(appConfig));
-                document.querySelectorAll('#visibility-controls input').forEach(input => { newConfig.pageVisibility[input.dataset.page] = input.checked; });
-                document.querySelectorAll('#pvc-price-controls .price-item').forEach((item, i) => { newConfig.prices.pvc[i].text = item.querySelector('.price-text').value; newConfig.prices.pvc[i].value = parseFloat(item.querySelector('.price-value').value); });
-                document.querySelectorAll('#wood-price-controls .price-item').forEach((item, i) => { newConfig.prices.wood[i].text = item.querySelector('.price-text').value; newConfig.prices.wood[i].value = parseFloat(item.querySelector('.price-value').value); });
+                
+                // Page Visibility
+                document.querySelectorAll('#visibility-controls input').forEach(input => { 
+                    newConfig.pageVisibility[input.dataset.page] = input.checked; 
+                });
+
+                // PVC Prices - Rebuild the array from the DOM
+                const newPvcPrices = [];
+                document.querySelectorAll('#pvc-price-controls .price-item').forEach(item => {
+                    const text = item.querySelector('.price-text').value.trim();
+                    const value = parseFloat(item.querySelector('.price-value').value);
+                    if (text && !isNaN(value)) {
+                        newPvcPrices.push({ text, value });
+                    }
+                });
+                newConfig.prices.pvc = newPvcPrices;
+
+                // Wood Prices - Rebuild the array from the DOM
+                const newWoodPrices = [];
+                document.querySelectorAll('#wood-price-controls .price-item').forEach(item => {
+                    const text = item.querySelector('.price-text').value.trim();
+                    const value = parseFloat(item.querySelector('.price-value').value);
+                    if (text && !isNaN(value)) {
+                        newWoodPrices.push({ text, value });
+                    }
+                });
+                newConfig.prices.wood = newWoodPrices;
+
+                // Rail Prices (unchanged logic)
                 document.querySelectorAll('#rail-price-controls .price-item').forEach(item => {
                     const key = item.dataset.key;
                     if (key) {
                         newConfig.prices.rail[key] = parseFloat(item.querySelector('.price-value').value);
                     }
                 });
-                await setDoc(doc(db, `artifacts/${appId}/public/data/config/main`), newConfig);
-                alert('บันทึกการเปลี่ยนแปลงแล้ว'); adminPanelModal.style.display = 'none';
+
+                try {
+                    await setDoc(doc(db, `artifacts/${appId}/public/data/config/main`), newConfig);
+                    alert('บันทึกการเปลี่ยนแปลงแล้ว');
+                    adminPanelModal.style.display = 'none';
+                } catch (e) {
+                    console.error("Error saving config:", e);
+                    alert('เกิดข้อผิดพลาดในการบันทึก: ' + e.message);
+                }
             };
 
             const openAdminPanel = () => {
                 if(!isLoggedIn) return;
                 const visibility = appConfig.pageVisibility || {};
                 const prices = appConfig.prices || { pvc: [], wood: [], rail: {} };
+                
                 const visContainer = document.getElementById('visibility-controls');
                 visContainer.innerHTML = Object.keys(tabElements).map(key => `<label class="flex items-center"><input type="checkbox" data-page="${key}" ${visibility[key] !== false ? 'checked' : ''} class="mr-2 h-4 w-4">${tabElements[key].textContent}</label>`).join('');
+                
                 const pvcContainer = document.getElementById('pvc-price-controls');
-                pvcContainer.innerHTML = (prices.pvc || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                pvcContainer.innerHTML = `
+                    <div class="price-list-container space-y-2">
+                        ${(prices.pvc || []).map(p => `
+                            <div class="price-item grid grid-cols-12 gap-2 items-center">
+                                <input type="text" class="price-text w-full p-1 border rounded col-span-6" value="${p.text}">
+                                <input type="number" step="any" class="price-value w-full p-1 border rounded col-span-4" value="${p.value}">
+                                <button type="button" class="delete-price-btn col-span-2 text-sm text-red-500 hover:text-red-700 font-semibold">ลบ</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" id="add-pvc-price-btn" class="mt-3 w-full border-2 border-dashed rounded-lg py-1 text-sm text-blue-600 hover:bg-blue-50">+ เพิ่มรายการราคา</button>
+                `;
+
                 const woodContainer = document.getElementById('wood-price-controls');
-                woodContainer.innerHTML = (prices.wood || []).map(p => `<div class="price-item grid grid-cols-2 gap-2"><input type="text" class="price-text w-full p-1 border rounded" value="${p.text}"><input type="number" class="price-value w-full p-1 border rounded" value="${p.value}"></div>`).join('');
+                woodContainer.innerHTML = `
+                    <div class="price-list-container space-y-2">
+                         ${(prices.wood || []).map(p => `
+                            <div class="price-item grid grid-cols-12 gap-2 items-center">
+                                <input type="text" class="price-text w-full p-1 border rounded col-span-6" value="${p.text}">
+                                <input type="number" step="any" class="price-value w-full p-1 border rounded col-span-4" value="${p.value}">
+                                <button type="button" class="delete-price-btn col-span-2 text-sm text-red-500 hover:text-red-700 font-semibold">ลบ</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" id="add-wood-price-btn" class="mt-3 w-full border-2 border-dashed rounded-lg py-1 text-sm text-blue-600 hover:bg-blue-50">+ เพิ่มรายการราคา</button>
+                `;
                 
                 const railContainer = document.getElementById('rail-price-controls');
                 const railPrices = prices.rail || {};
@@ -790,33 +882,27 @@
                 } catch(e) { console.error("Error viewing document: ", e); alert('ไม่สามารถเปิดดูรายละเอียดได้'); }
             };
 
-            // **ส่วนที่เพิ่มใหม่**: ฟังก์ชันสำหรับจัดการการแคปภาพ
             const handleCaptureScreenshot = () => {
                 const elementToCapture = document.querySelector('#pdf-preview-modal .modal-box');
                 const actionButtons = document.getElementById('pdf-modal-actions');
                 
-                // ซ่อนปุ่มก่อนแคปภาพ เพื่อไม่ให้ปุ่มติดไปในรูป
                 actionButtons.style.visibility = 'hidden';
 
                 html2canvas(elementToCapture, {
-                    scale: 2, // เพิ่มความละเอียดของภาพเป็น 2 เท่า
+                    scale: 2, 
                     useCORS: true,
-                    // ตั้งค่าให้พื้นหลังของ modal ที่เป็นสีขาว ถูก render อย่างถูกต้อง
                     backgroundColor: '#ffffff' 
                 }).then(canvas => {
-                    // สร้างลิงก์สำหรับดาวน์โหลดภาพ
                     const link = document.createElement('a');
                     link.download = 'ใบเสนอราคา.png';
                     link.href = canvas.toDataURL('image/png');
                     link.click();
                     
-                    // แสดงปุ่มกลับมาเหมือนเดิมหลังจากแคปภาพเสร็จ
                     actionButtons.style.visibility = 'visible';
 
                 }).catch(err => {
                     console.error('เกิดข้อผิดพลาดขณะแคปภาพ:', err);
                     alert('ไม่สามารถแคปภาพได้: ' + err.message);
-                    // หากเกิดข้อผิดพลาด ให้แสดงปุ่มกลับมาเหมือนเดิม
                     actionButtons.style.visibility = 'visible';
                 });
             };
@@ -835,6 +921,30 @@
             });
             document.getElementById('admin-save-btn').addEventListener('click', saveAdminChanges);
             
+            // --- START: FIX FOR CUSTOM PRICE INPUT ---
+            const handlePriceSelectChange = (selectElement, customInputElement) => {
+                if (selectElement.value === 'custom') {
+                    customInputElement.disabled = false;
+                    customInputElement.classList.remove('bg-slate-200');
+                    customInputElement.classList.add('bg-white');
+                    customInputElement.focus();
+                } else {
+                    customInputElement.disabled = true;
+                    customInputElement.value = '';
+                    customInputElement.classList.add('bg-slate-200');
+                    customInputElement.classList.remove('bg-white');
+                }
+            };
+
+            document.getElementById('pvcPriceSelect').addEventListener('change', (e) => {
+                handlePriceSelectChange(e.target, document.getElementById('pvcCustomPrice'));
+            });
+
+            document.getElementById('woodPriceSelect').addEventListener('change', (e) => {
+                handlePriceSelectChange(e.target, document.getElementById('woodCustomPrice'));
+            });
+            // --- END: FIX FOR CUSTOM PRICE INPUT ---
+
             document.getElementById('blindsCalculateBtn').addEventListener('click', handleBlindsCalculation);
             document.getElementById('blindsPdfBtn').addEventListener('click', () => {
                 const data = blindsCalculatedData; if(!data) return;
@@ -895,7 +1005,6 @@
                 pdfPreviewModal.style.display = 'none';
             });
             
-            // **ส่วนที่เพิ่มใหม่**: เพิ่ม Event Listener ให้กับปุ่มแคปภาพ
             pdfCaptureBtn.addEventListener('click', handleCaptureScreenshot);
 
             // --- App Start ---
